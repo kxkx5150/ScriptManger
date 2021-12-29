@@ -38,6 +38,8 @@ private:
 
     HWND m_combohwnd = nullptr;
     HWND m_run_btnhwnd = nullptr;
+    HWND m_delete_btnhwnd = nullptr;
+
     HWND m_dd_listhwnd = nullptr;
 
     HWND m_name_edithwnd = nullptr;
@@ -46,6 +48,7 @@ private:
     HWND m_addgrouphwnd = nullptr;
     HWND m_dropgrouphwnd = nullptr;
     HWND m_add_btnhwnd = nullptr;
+    HWND m_update_btnhwnd = nullptr;
 
     HWND m_addarghwnd = nullptr;
     HWND m_delarghwnd = nullptr;
@@ -67,8 +70,16 @@ public:
 
     void init();
     void resize_window(HWND hWnd, bool addmenu);
+
+    void change_venv_checkbox();
+    void change_select_combobox();
     void exe_script(int exeidx = -1);
-    void check_input_path();
+    void delete_script(int exeidx = -1);
+    
+    void change_script_path();
+    void set_script_value(int exeidx);
+    void reset_script_value();
+
     void open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt);
     void open_directory_dialog(HWND hwnd, HWND dirhwnd);
     void click_add_script();

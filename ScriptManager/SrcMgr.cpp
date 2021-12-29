@@ -29,6 +29,120 @@ void SrcMgr::init()
         select_combobox_item(0);
     }
 }
+void SrcMgr::change_select_combobox()
+{
+    int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+    if (exeidx == -1) {
+        EnableWindow(m_run_btnhwnd, false);
+        EnableWindow(m_delete_btnhwnd, false);
+    } else {
+        set_script_value(exeidx);
+        EnableWindow(m_run_btnhwnd, true);
+        EnableWindow(m_delete_btnhwnd, true);
+
+        EnableWindow(m_update_btnhwnd, true);
+    }
+}
+void SrcMgr::set_script_value(int exeidx)
+{
+    Command cmd = m_commands[exeidx];
+    SetWindowText(m_name_edithwnd, cmd.name);
+    SetWindowText(m_cmd_edithwnd, cmd.exe);
+
+    SetWindowText(m_venv_pathhwnd, cmd.batpath);
+    if (0 < _tcslen(cmd.batpath)) {
+        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    }
+    change_venv_checkbox();
+
+    SetWindowText(m_src_pathhwnd, cmd.pypath);
+    change_script_path();
+    SetWindowText(m_dir_pathhwnd, cmd.pydir);
+
+    if (cmd.windowopt == SW_SHOWNORMAL) {
+        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    } else {
+        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    }
+
+    if (0 < _tcslen(cmd.args)) {
+        SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    }
+}
+void SrcMgr::reset_script_value()
+{
+    SetWindowText(m_name_edithwnd, L"");
+    SetWindowText(m_cmd_edithwnd, L"python.exe");
+    SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    SetWindowText(m_venv_pathhwnd, L"");
+    change_venv_checkbox();
+    SetWindowText(m_src_pathhwnd, L"");
+    change_script_path();
+    SetWindowText(m_dir_pathhwnd, L"");
+    SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+}
+
+
+
+
+
+
+void SrcMgr::change_venv_checkbox()
+{
+    if (BST_CHECKED == SendMessage(m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
+        EnableWindow(m_venv_pathhwnd, TRUE);
+        EnableWindow(m_venv_dirbtn, TRUE);
+    } else {
+        EnableWindow(m_venv_pathhwnd, FALSE);
+        EnableWindow(m_venv_dirbtn, FALSE);
+    }
+}
+void SrcMgr::change_script_path()
+{
+    TCHAR srcpathbuf[MAX_PATH];
+    GetWindowText(m_src_pathhwnd, srcpathbuf, MAX_PATH);
+    trim_tchar(srcpathbuf);
+    if (_tcslen(srcpathbuf) == 0) {
+        EnableWindow(m_add_btnhwnd, false);
+        EnableWindow(m_update_btnhwnd, false);
+    } else {
+        EnableWindow(m_add_btnhwnd, true);
+        int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+        if (exeidx == -1) {
+            EnableWindow(m_update_btnhwnd, false);
+        } else {
+            EnableWindow(m_update_btnhwnd, true);
+        }
+    }
+
+    //DWORD dwAttrib = GetFileAttributes(srcpathbuf);
+    //if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+    //    EnableWindow(m_add_btnhwnd, true);
+    //} else {
+    //    EnableWindow(m_add_btnhwnd, false);
+    //}
+}
+
+
+
+
+
+void SrcMgr::delete_script(int exeidx)
+{
+    auto comcount = m_commands.size();
+    if (comcount == 0)
+        return;
+    if (exeidx == -1)
+        exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+}
 void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, TCHAR* args, int windowopt)
 {
     Command command;
@@ -43,12 +157,22 @@ void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
     add_combobox_item(command.name);
     m_commands.push_back(command);
 }
+void replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword)
+{
+    std::wstring sstr = std::wstring(strbuf);
+    std::wstring::size_type Pos(sstr.find(sword));
+    while (Pos != std::string::npos) {
+        sstr.replace(Pos, sword.length(), rword);
+        Pos = sstr.find(sword, Pos + rword.length());
+    }
+    wcscpy_s(strbuf, maxlen, sstr.c_str());
+}
 void SrcMgr::exe_script(int exeidx)
 {
     auto comcount = m_commands.size();
-    if (comcount == 0) 
+    if (comcount == 0)
         return;
-    if (exeidx == -1) 
+    if (exeidx == -1)
         exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
 
     Command command = m_commands[exeidx];
@@ -65,6 +189,15 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(args, 8191, command.exe);
     wcscat_s(args, 8191, L" ");
     wcscat_s(args, 8191, command.pypath);
+
+    if (0 < _tcslen(command.args)) {
+        wcscat_s(args, 8191, L" ");
+        TCHAR* buftmp = new TCHAR[8191];
+        wcscpy_s(buftmp, 8191, command.args);
+        replace_string(buftmp, 8191, L"\n", L"\ ");
+        wcscat_s(args, 8191, buftmp); 
+    }
+
     ShellExecute(NULL, L"open", command.cmd, args, command.pydir, m_commands[exeidx].windowopt);
     delete[] args;
 }
@@ -75,48 +208,51 @@ void SrcMgr::create_control()
     m_sshFont = create_font(10);
     m_lsthFont = create_font(12);
 
-    m_combohwnd = create_combobox(m_prnthwnd, 6, 2, 190, 200, IDC_COMBO);
-    m_run_btnhwnd = create_button(m_prnthwnd, 202, 1, 60, 26, ID_EXE, (TCHAR*)L"Run");
+    m_combohwnd = create_combobox(m_prnthwnd, 6, 2, 180, 200, IDC_COMBO);
+    m_run_btnhwnd = create_button(m_prnthwnd, 190, 1, 76, 26, ID_EXE, (TCHAR*)L"Run");
+    m_delete_btnhwnd = create_button(m_prnthwnd, 269, 1, 54, 26, ID_COMB_DELETE, (TCHAR*)L"Delete");
 
-    m_dropgrouphwnd = create_group(m_prnthwnd, 2, 34, 263, 120, (TCHAR*)L"Drop argument files");
-    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 240, 106);
-    m_addarghwnd = create_button(m_dropgrouphwnd, 242, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
-    m_delarghwnd = create_button(m_dropgrouphwnd, 242, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
-    m_uparghwnd = create_button(m_dropgrouphwnd, 242, 58, 18, 22, IDC_UP_ARG_BUTTON, (TCHAR*)L"ª");
-    m_downarghwnd = create_button(m_dropgrouphwnd, 242, 84, 18, 22, IDC_DOWN_ARG_BUTTON, (TCHAR*)L"«");
+    m_dropgrouphwnd = create_group(m_prnthwnd, 2, 34, 320, 120, (TCHAR*)L"Drop argument files");
+    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 106);
+    m_addarghwnd = create_button(m_dropgrouphwnd, 300, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
+    m_delarghwnd = create_button(m_dropgrouphwnd, 300, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
+    m_uparghwnd = create_button(m_dropgrouphwnd, 300, 58, 18, 22, IDC_UP_ARG_BUTTON, (TCHAR*)L"ª");
+    m_downarghwnd = create_button(m_dropgrouphwnd, 300, 84, 18, 22, IDC_DOWN_ARG_BUTTON, (TCHAR*)L"«");
     DragAcceptFiles(m_dd_listhwnd, TRUE);
     SetWindowSubclass(m_dropgrouphwnd, &SubclassWindowProc, 0, 0);
     SetWindowSubclass(m_dd_listhwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_dd_listhwnd, GWLP_USERDATA, (LONG)this);
 
-    m_addgrouphwnd = create_group(m_prnthwnd, 4, 162, 259, 320, (TCHAR*)L"Add script", IDC_ADDGROUP);
-    m_name_edithwnd = create_edittext(m_addgrouphwnd, 4, 18, 120, 18, IDC_NAMETEXT, (TCHAR*)L"");
-    m_cmd_edithwnd = create_edittext(m_addgrouphwnd, 4, 46, 120, 18, IDC_EXE_EDIT, (TCHAR*)L"python.exe");
+    m_addgrouphwnd = create_group(m_prnthwnd, 2, 162, 320, 320, (TCHAR*)L"Add script", IDC_ADDGROUP);
+    m_name_edithwnd = create_edittext(m_addgrouphwnd, 4, 18, 160, 18, IDC_NAMETEXT, (TCHAR*)L"");
+    m_cmd_edithwnd = create_edittext(m_addgrouphwnd, 4, 46, 160, 18, IDC_EXE_EDIT, (TCHAR*)L"python.exe");
 
-    m_src_pathhwnd = create_edittext(m_addgrouphwnd, 4, 76, 220, 18, IDC_SRCPATH, (TCHAR*)L"");
-    m_src_filebtn = create_button(m_addgrouphwnd, 228, 75, 26, 19, IDC_SRC_BUTTON, (TCHAR*)L"...");
+    m_src_pathhwnd = create_edittext(m_addgrouphwnd, 4, 76, 284, 18, IDC_SRCPATH, (TCHAR*)L"");
+    m_src_filebtn = create_button(m_addgrouphwnd, 292, 75, 26, 19, IDC_SRC_BUTTON, (TCHAR*)L"...");
 
     m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 4, 102, 76, 18, IDC_VENVCHK, (TCHAR*)L"Use venv");
-    m_venv_pathhwnd = create_edittext(m_addgrouphwnd, 4, 120, 220, 18, IDC_VENVPATH, (TCHAR*)L"");
-    m_venv_dirbtn = create_button(m_addgrouphwnd, 228, 119, 26, 19, IDC_VENV_BUTTON, (TCHAR*)L"...");
+    m_venv_pathhwnd = create_edittext(m_addgrouphwnd, 4, 120, 284, 18, IDC_VENVPATH, (TCHAR*)L"");
+    m_venv_dirbtn = create_button(m_addgrouphwnd, 292, 119, 26, 19, IDC_VENV_BUTTON, (TCHAR*)L"...");
 
-    m_dir_pathhwnd = create_edittext(m_addgrouphwnd, 4, 161, 220, 18, IDC_WDIRPATH, (TCHAR*)L"");
-    m_working_dirbtn = create_button(m_addgrouphwnd, 228, 160, 26, 19, IDC_DIR_BUTTON, (TCHAR*)L"...");
+    m_dir_pathhwnd = create_edittext(m_addgrouphwnd, 4, 161, 284, 18, IDC_WDIRPATH, (TCHAR*)L"");
+    m_working_dirbtn = create_button(m_addgrouphwnd, 292, 160, 26, 19, IDC_DIR_BUTTON, (TCHAR*)L"...");
     SetWindowSubclass(m_addgrouphwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_addgrouphwnd, GWLP_USERDATA, (LONG)this);
 
-    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 9, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
+    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 46, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
 
-    create_cmd_radiobutton(m_addgrouphwnd, 8, 230, 120, 25);
-    m_add_btnhwnd = create_button(m_addgrouphwnd, 20, 270, 200, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
+    create_cmd_radiobutton(m_addgrouphwnd, 46, 226, 120, 25);
+    m_add_btnhwnd = create_button(m_addgrouphwnd, 53, 270, 100, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
+    m_update_btnhwnd = create_button(m_addgrouphwnd, 170, 270, 100, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
     Edit_SetCueBannerText(m_cmd_edithwnd, L"*.exe");
     Edit_SetCueBannerText(m_venv_pathhwnd, L"venv activate script path");
     Edit_SetCueBannerText(m_src_pathhwnd, L"Script path");
     Edit_SetCueBannerText(m_dir_pathhwnd, L"Working directory");
-    SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
-    EnableWindow(m_add_btnhwnd, false);
+
+    reset_script_value();
+    change_select_combobox();
 }
 HFONT SrcMgr::create_font(int fontsize)
 {
@@ -131,6 +267,8 @@ void SrcMgr::set_font()
 {
     SendMessage(m_combohwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_run_btnhwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_delete_btnhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
+
     SendMessage(m_dropgrouphwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_dd_listhwnd, WM_SETFONT, (WPARAM)m_lsthFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_addgrouphwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
@@ -244,17 +382,11 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu)
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
     }
 }
-void SrcMgr::check_input_path()
-{
-    TCHAR srcpathbuf[MAX_PATH];
-    GetWindowText(m_src_pathhwnd, srcpathbuf, MAX_PATH);
-    DWORD dwAttrib = GetFileAttributes(srcpathbuf);
-    if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
-        EnableWindow(m_add_btnhwnd, true);
-    } else {
-        EnableWindow(m_add_btnhwnd, false);
-    }
-}
+
+
+
+
+
 void SrcMgr::click_add_script()
 {
     TCHAR namebuf[MAX_PATH] = { '\0' };
@@ -302,11 +434,20 @@ void SrcMgr::click_add_script()
     GetWindowText(m_dir_pathhwnd, dirpathbuf, MAX_PATH);
     trim_tchar(dirpathbuf);
 
-    TCHAR* argsbuf = new TCHAR[MAX_PATH];
+    TCHAR* argsbuf = new TCHAR[8191];
     argsbuf[0] = '\0';
-
-
-
+    if (BST_CHECKED == SendMessage(m_stor_arg_chkboxhwnd, BM_GETCHECK, 0, 0)) {
+        TCHAR tmpbuf[MAX_PATH] = { '\0' };
+        int items = SendMessage(m_dd_listhwnd, LB_GETCOUNT, 0, 0);
+        for (size_t i = 0; i < items; i++) {
+            SendMessage(m_dd_listhwnd, LB_GETTEXT, i, (LPARAM)tmpbuf);
+            wcscat_s(argsbuf, 8191, tmpbuf);
+            tmpbuf[0] = '\0';
+            if (i != items - 1) {
+                wcscat_s(argsbuf, 8191, L"\n");
+            }
+        }
+    }
 
     int wopt = SW_SHOWNORMAL;
     if (SendMessage(m_showcmdhwnd, BM_GETCHECK, 0, 0) != BST_CHECKED) {
@@ -413,11 +554,20 @@ void SrcMgr::click_down_arg()
 }
 void SrcMgr::drop_files_into_listbox(HDROP hdrop)
 {
+    TCHAR _filepath[MAX_PATH];
     TCHAR filepath[MAX_PATH];
+    _filepath[0] = '\0';
+    filepath[0] = '\0';
+
     int num = DragQueryFile(hdrop, -1, NULL, 0);
     for (int i = 0; i < num; i++) {
-        DragQueryFile(hdrop, i, filepath, sizeof(filepath) / sizeof(TCHAR));
+        DragQueryFile(hdrop, i, _filepath, sizeof(_filepath) / sizeof(TCHAR));
+        wcscat_s(filepath, MAX_PATH, L"\"");
+        wcscat_s(filepath, MAX_PATH, _filepath);
+        wcscat_s(filepath, MAX_PATH, L"\"");
         SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)filepath);
+        _filepath[0] = '\0';
+        filepath[0] = '\0';
     }
     DragFinish(hdrop);
 }
@@ -539,13 +689,7 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         } break;
 
         case IDC_VENVCHK: {
-            if (BST_CHECKED == SendMessage(g_srcmgr->m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
-                EnableWindow(g_srcmgr->m_venv_pathhwnd, TRUE);
-                EnableWindow(g_srcmgr->m_venv_dirbtn, TRUE);
-            } else {
-                EnableWindow(g_srcmgr->m_venv_pathhwnd, FALSE);
-                EnableWindow(g_srcmgr->m_venv_dirbtn, FALSE);
-            }
+            g_srcmgr->change_venv_checkbox();
         } break;
 
         case IDC_NAMETEXT:
@@ -554,7 +698,7 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         case IDC_WDIRPATH: {
             switch (HIWORD(wParam)) {
             case EN_CHANGE:
-                g_srcmgr->check_input_path();
+                g_srcmgr->change_script_path();
                 break;
             }
         } break;
