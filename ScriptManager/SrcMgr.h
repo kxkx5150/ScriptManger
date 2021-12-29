@@ -9,13 +9,13 @@ struct Command {
     TCHAR* pypath;
     TCHAR* pydir;
     TCHAR* args;
+    TCHAR* cmd;
     int windowopt;
 };
 
 LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-
 
 class SrcMgr {
 public:
@@ -80,7 +80,7 @@ public:
     void click_down_arg();
 
     void add_arg_txt(HWND hDlg);
-    void trim_tchar(TCHAR* pText, TCHAR* wsBuf);
+    void trim_tchar(TCHAR* pText);
 
 private:
     void set_font();
@@ -99,6 +99,4 @@ private:
     void add_combobox_item(const TCHAR* pszBuf);
     void select_combobox_item(int index);
     int get_combobox_index(TCHAR* itemstr);
-
-
 };

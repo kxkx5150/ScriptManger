@@ -1,25 +1,24 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include "SrcMgr.h"
 #include "resource.h"
 #include <CommCtrl.h>
-#include <crtdbg.h>
 #include <shlobj.h>
 #include <string>
 #include <tchar.h>
-#include <windows.h>
 #pragma comment(lib, "Comctl32.lib")
 
-extern SrcMgr* g_srcmgr;
+SrcMgr* g_srcmgr;
 SrcMgr::SrcMgr(HWND hWnd, HINSTANCE hInst)
 {
     m_prnthwnd = hWnd;
     m_hInst = hInst;
+    g_srcmgr = this;
 }
 SrcMgr::~SrcMgr()
 {
     DeleteObject(m_hFont);
     DeleteObject(m_shFont);
     DeleteObject(m_sshFont);
+    DeleteObject(m_lsthFont);
 }
 void SrcMgr::init()
 {
@@ -39,6 +38,7 @@ void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
     command.pypath = pypath;
     command.pydir = pydir;
     command.args = args;
+    command.cmd = (TCHAR*)L"cmd.exe";
     command.windowopt = windowopt;
     add_combobox_item(command.name);
     m_commands.push_back(command);
@@ -46,34 +46,27 @@ void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
 void SrcMgr::exe_script(int exeidx)
 {
     auto comcount = m_commands.size();
-    if (comcount == 0) {
+    if (comcount == 0) 
         return;
-    }
-
-    if (exeidx == -1) {
+    if (exeidx == -1) 
         exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
-    }
+
     Command command = m_commands[exeidx];
-
-    TCHAR* args = new TCHAR[4096];
-    TCHAR* workdir = new TCHAR[4096];
-    TCHAR cmd[] = L"cmd.exe";
-    args[0] = 0;
-    workdir[0] = 0;
-    wcscat(args, L"/k ");
-
+    TCHAR* args = new TCHAR[8191];
+    args[0] = '\0';
+    wcscat_s(args, 8191, L"/k");
     if (_tcslen(command.batpath) > 0) {
-        wcscat(args, command.batpath);
-        wcscat(args, L" & python ");
-        wcscat(args, command.pypath);
-        wcscat(workdir, command.pydir);
+        wcscat_s(args, 8191, L" ");
+        wcscat_s(args, 8191, command.batpath);
+        wcscat_s(args, 8191, L" & ");
     } else {
-        wcscat(args, L"python ");
-        wcscat(args, command.pypath);
-        wcscat(workdir, command.pydir);
+        wcscat_s(args, 8191, L" ");
     }
-
-    ShellExecute(NULL, L"open", cmd, args, workdir, m_commands[exeidx].windowopt);
+    wcscat_s(args, 8191, command.exe);
+    wcscat_s(args, 8191, L" ");
+    wcscat_s(args, 8191, command.pypath);
+    ShellExecute(NULL, L"open", command.cmd, args, command.pydir, m_commands[exeidx].windowopt);
+    delete[] args;
 }
 void SrcMgr::create_control()
 {
@@ -112,7 +105,7 @@ void SrcMgr::create_control()
     SetWindowSubclass(m_addgrouphwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_addgrouphwnd, GWLP_USERDATA, (LONG)this);
 
-    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 4, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
+    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 9, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
 
     create_cmd_radiobutton(m_addgrouphwnd, 8, 230, 120, 25);
     m_add_btnhwnd = create_button(m_addgrouphwnd, 20, 270, 200, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
@@ -155,7 +148,6 @@ void SrcMgr::set_font()
     SendMessage(m_src_filebtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_working_dirbtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_stor_arg_chkboxhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
-
 
     SendMessage(m_addarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_delarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
@@ -267,6 +259,7 @@ void SrcMgr::click_add_script()
 {
     TCHAR namebuf[MAX_PATH] = { '\0' };
     GetWindowText(m_name_edithwnd, namebuf, MAX_PATH);
+    trim_tchar(namebuf);
     if (_tcslen(namebuf) == 0) {
         wcscpy_s(namebuf, _countof(namebuf), L"no_name");
     }
@@ -287,6 +280,7 @@ void SrcMgr::click_add_script()
 
     TCHAR exebuf[MAX_PATH] = { '\0' };
     GetWindowText(m_cmd_edithwnd, exebuf, MAX_PATH);
+    trim_tchar(exebuf);
     if (_tcslen(exebuf) == 0) {
         wcscpy_s(exebuf, _countof(exebuf), L"python.exe");
     }
@@ -298,17 +292,24 @@ void SrcMgr::click_add_script()
     TCHAR* srcpathbuf = new TCHAR[MAX_PATH];
     GetWindowText(m_src_pathhwnd, srcpathbuf, MAX_PATH);
     TCHAR* vpathbuf = new TCHAR[MAX_PATH];
-    GetWindowText(m_venv_pathhwnd, vpathbuf, MAX_PATH);
+    if (BST_CHECKED == SendMessage(m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
+        GetWindowText(m_venv_pathhwnd, vpathbuf, MAX_PATH);
+        trim_tchar(vpathbuf);
+    } else {
+        vpathbuf[0] = '\0';
+    }
     TCHAR* dirpathbuf = new TCHAR[MAX_PATH];
     GetWindowText(m_dir_pathhwnd, dirpathbuf, MAX_PATH);
+    trim_tchar(dirpathbuf);
 
     TCHAR* argsbuf = new TCHAR[MAX_PATH];
     argsbuf[0] = '\0';
 
-    int wopt = 0;
-    if (SendMessage(m_showcmdhwnd, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-        wopt = SW_SHOWNORMAL;
-    } else {
+
+
+
+    int wopt = SW_SHOWNORMAL;
+    if (SendMessage(m_showcmdhwnd, BM_GETCHECK, 0, 0) != BST_CHECKED) {
         wopt = SW_HIDE;
     }
 
@@ -321,10 +322,11 @@ void SrcMgr::click_add_script()
         argsbuf,
         wopt);
 }
-
-void SrcMgr::trim_tchar(TCHAR* pText, TCHAR* wsBuf)
+void SrcMgr::trim_tchar(TCHAR* pText)
 {
-    TCHAR* p = pText;
+    TCHAR wsBuf[MAX_PATH];
+    wcscpy_s(wsBuf, MAX_PATH, pText);
+    TCHAR* p = wsBuf;
     TCHAR *pTop = NULL, *pEnd = NULL;
     while ((*p != L'\0') && (*p != L'\r') && (*p != L'\n')) {
         if ((*p != L'\t') && (*p != L' ') && (*p != L'Å@')) {
@@ -346,22 +348,21 @@ void SrcMgr::trim_tchar(TCHAR* pText, TCHAR* wsBuf)
     }
 
     if (pTop && pEnd) {
-        int nLength = (pEnd - pTop);
-        memcpy(wsBuf, pTop, nLength << 1);
-        wsBuf[nLength] = L'\0';
+        long long nLength = (pEnd - pTop);
+        wmemcpy(pText, pTop, nLength << 1);
+        pText[nLength] = L'\0';
     } else {
-        wsBuf[0] = L'\0';
+        pText[0] = L'\0';
     }
 }
 void SrcMgr::add_arg_txt(HWND hDlg)
 {
     HWND ehwnd = GetDlgItem(hDlg, IDC_ARG_EDIT);
     TCHAR orgtxt[MAX_PATH];
-    TCHAR txt[MAX_PATH];
     GetWindowText(ehwnd, orgtxt, MAX_PATH);
-    trim_tchar(orgtxt, txt);
-    if (_tcslen(txt) > 0) {
-        SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)txt);
+    trim_tchar(orgtxt);
+    if (_tcslen(orgtxt) > 0) {
+        SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)orgtxt);
     }
 }
 void SrcMgr::click_add_arg()
@@ -508,6 +509,7 @@ INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
             break;
         }
     }
+
     return (INT_PTR)FALSE;
 }
 LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
@@ -583,5 +585,6 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         RemoveWindowSubclass(hWnd, SubclassWindowProc, uIdSubclass);
         break;
     }
+
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
