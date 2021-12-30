@@ -188,7 +188,6 @@ void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
         m_commands.push_back(command);
         reset_script_value();
     } else {
-        SendMessage(m_combohwnd, CB_DELETESTRING, index, 0);
         SendMessage(m_combohwnd, CB_INSERTSTRING, index, (LPARAM)command.name);
         SendMessage(m_combohwnd, CB_SETCURSEL, index, 0);
         delete_command(index);
@@ -280,7 +279,7 @@ void SrcMgr::create_control()
     m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 44, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
 
     create_cmd_radiobutton(m_addgrouphwnd, 44, 226, 120, 25);
-    m_add_btnhwnd = create_button(m_addgrouphwnd, 51, 270, 100, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
+    m_add_btnhwnd = create_button(m_addgrouphwnd, 49, 270, 100, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
     m_update_btnhwnd = create_button(m_addgrouphwnd, 170, 270, 100, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
@@ -407,15 +406,16 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu)
     GetWindowRect(hWnd, &rc);
     int cx = rc.right - rc.left;
     int cy = rc.bottom - rc.top;
-    int addarea = 260;
+    int addarea = 329;
 
     if (addmenu) {
+        ShowWindow(m_addgrouphwnd, SW_SHOWNORMAL);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy + addarea, SWP_NOMOVE);
     } else {
+        ShowWindow(m_addgrouphwnd, SW_HIDE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
     }
 }
-
 void SrcMgr::click_add_script(int index)
 {
     TCHAR namebuf[MAX_PATH] = { '\0' };
@@ -745,6 +745,7 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
         case ID_UPDATE_BUTTON: {
             int exeidx = SendMessage(g_srcmgr->m_combohwnd, CB_GETCURSEL, 0, 0);
+            SendMessage(g_srcmgr->m_combohwnd, CB_DELETESTRING, exeidx, 0);
             g_srcmgr->click_add_script(exeidx);
         } break;
 
