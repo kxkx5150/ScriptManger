@@ -1,7 +1,8 @@
 #pragma once
 #include <Windows.h>
-#include <deque>
+#include <vector>
 #include <string>
+#include <tchar.h>
 
 struct Command {
     TCHAR* name;
@@ -59,7 +60,7 @@ private:
     HWND m_src_filebtn = nullptr;
     HWND m_working_dirbtn = nullptr;
 
-    std::deque<Command> m_commands;
+    std::vector<Command> m_commands;
     int m_activeidx = -1;
 
 public:
@@ -92,6 +93,9 @@ public:
     void add_arg_txt(HWND hDlg);
     void trim_tchar(TCHAR* pText);
     void replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword);
+
+    void write_setting_csv();
+    void read_setting_csv();
 
 private:
     void set_font();

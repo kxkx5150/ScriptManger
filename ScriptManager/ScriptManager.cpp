@@ -155,6 +155,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CREATE: {
         g_script_manager = new SrcMgr(hWnd, hInst);
         g_script_manager->init();
+        g_script_manager->read_setting_csv();
+
     } break;
 
     case WM_DESTROY: {

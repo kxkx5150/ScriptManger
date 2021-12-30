@@ -1,8 +1,11 @@
 #include "SrcMgr.h"
 #include "resource.h"
 #include <CommCtrl.h>
+#include <fstream>
+#include <iostream>
 #include <shlobj.h>
-#include <tchar.h>
+#include <sstream>
+#include <utility>
 #pragma comment(lib, "Comctl32.lib")
 
 SrcMgr* g_srcmgr;
@@ -170,7 +173,7 @@ void SrcMgr::delete_command(int exeidx)
     delete[] cmd.cmd;
     m_commands.erase(m_commands.begin() + exeidx);
 }
-void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, 
+void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir,
     TCHAR* args, TCHAR* cmd, int windowopt, int index)
 {
     Command command;
@@ -496,8 +499,7 @@ void SrcMgr::click_add_script(int index)
         argsbuf,
         cmd,
         wopt,
-        index
-    );
+        index);
 }
 void SrcMgr::trim_tchar(TCHAR* pText)
 {
@@ -606,6 +608,80 @@ void SrcMgr::drop_files_into_listbox(HDROP hdrop)
         filepath[0] = '\0';
     }
     DragFinish(hdrop);
+}
+void SrcMgr::write_setting_csv()
+{
+    std::wofstream outputfile(L"test.csv");
+    for (auto&& cmd : m_commands) {
+        replace_string(cmd.args, 8191, L"\n", L"\t");
+        outputfile << cmd.name;
+        outputfile << ',';
+        outputfile << cmd.exe;
+        outputfile << ',';
+        outputfile << cmd.batpath;
+        outputfile << ',';
+        outputfile << cmd.pypath;
+        outputfile << ',';
+        outputfile << cmd.pydir;
+        outputfile << ',';
+        outputfile << cmd.args;
+        outputfile << ',';
+        outputfile << cmd.cmd;
+        outputfile << ',';
+        outputfile << cmd.windowopt;
+        outputfile << '\n';
+    }
+    outputfile.close();
+}
+std::vector<std::wstring> split(std::wstring& input, TCHAR delimiter)
+{
+    std::wistringstream stream(input);
+    std::wstring field;
+    std::vector<std::wstring> result;
+    while (getline(stream, field, delimiter)) {
+        result.push_back(field);
+    }
+    return result;
+}
+void SrcMgr::read_setting_csv()
+{
+    int windowopt;
+    std::wifstream ifs("test.csv");
+    std::wstring line;
+    while (getline(ifs, line)) {
+        std::vector<std::wstring> strvec = split(line, ',');
+        int idx = 0;
+
+        TCHAR* name = new TCHAR[MAX_PATH];
+        wcscpy_s(name, MAX_PATH, strvec.at(idx).c_str());
+        TCHAR* exe = new TCHAR[MAX_PATH];
+        wcscpy_s(exe, MAX_PATH, strvec.at(idx + 1).c_str());
+        TCHAR* batpath = new TCHAR[MAX_PATH];
+        wcscpy_s(batpath, MAX_PATH, strvec.at(idx + 2).c_str());
+        TCHAR* pypath = new TCHAR[MAX_PATH];
+        wcscpy_s(pypath, MAX_PATH, strvec.at(idx + 3).c_str());
+        TCHAR* pydir = new TCHAR[MAX_PATH];
+        wcscpy_s(pydir, MAX_PATH, strvec.at(idx + 4).c_str());
+
+        TCHAR* args = new TCHAR[8191];
+        wcscpy_s(args, MAX_PATH, strvec.at(idx + 5).c_str());
+        replace_string(args, 8191, L"\t", L"\n");
+
+        TCHAR* cmd = new TCHAR[MAX_PATH];
+        wcscpy_s(cmd, MAX_PATH, strvec.at(idx + 6).c_str());
+        int windowopt = std::stoi(strvec.at(idx + 7));
+
+        add_script(
+            name,
+            exe,
+            batpath,
+            pypath,
+            pydir,
+            args,
+            cmd,
+            windowopt,
+            -1);
+    }
 }
 void SrcMgr::open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt)
 {
@@ -772,6 +848,7 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     } break;
 
     case WM_NCDESTROY:
+        g_srcmgr->write_setting_csv();
         RemoveWindowSubclass(hWnd, SubclassWindowProc, uIdSubclass);
         break;
     }
