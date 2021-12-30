@@ -75,7 +75,8 @@ public:
     void change_select_combobox();
     void exe_script(int exeidx = -1);
     void delete_script(int exeidx = -1);
-    
+    void delete_command(int exeidx);
+
     void change_script_path();
     void set_script_value(int exeidx);
     void reset_script_value();
@@ -105,7 +106,7 @@ private:
     HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     void create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight);
 
-    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, TCHAR* args, int windowopt);
+    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, TCHAR* args, TCHAR* cmd, int windowopt);
 
     void add_combobox_item(const TCHAR* pszBuf);
     void select_combobox_item(int index);
