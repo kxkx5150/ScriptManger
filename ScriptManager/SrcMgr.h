@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
-#include <vector>
+#include <deque>
+#include <string>
 
 struct Command {
     TCHAR* name;
@@ -29,6 +30,7 @@ public:
     HWND m_dir_pathhwnd = nullptr;
     HWND m_venv_dirbtn = nullptr;
     HWND m_stor_arg_chkboxhwnd = nullptr;
+    HWND m_combohwnd = nullptr;
 
 private:
     HFONT m_hFont = nullptr;
@@ -36,7 +38,6 @@ private:
     HFONT m_sshFont = nullptr;
     HFONT m_lsthFont = nullptr;
 
-    HWND m_combohwnd = nullptr;
     HWND m_run_btnhwnd = nullptr;
     HWND m_delete_btnhwnd = nullptr;
 
@@ -58,10 +59,7 @@ private:
     HWND m_src_filebtn = nullptr;
     HWND m_working_dirbtn = nullptr;
 
-    int m_comboid = 0;
-    int m_runbtnid = 0;
-
-    std::vector<Command> m_commands;
+    std::deque<Command> m_commands;
     int m_activeidx = -1;
 
 public:
@@ -83,7 +81,7 @@ public:
 
     void open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt);
     void open_directory_dialog(HWND hwnd, HWND dirhwnd);
-    void click_add_script();
+    void click_add_script(int index=-1);
     void drop_files_into_listbox(HDROP hdrop);
 
     void click_add_arg();
@@ -93,6 +91,7 @@ public:
 
     void add_arg_txt(HWND hDlg);
     void trim_tchar(TCHAR* pText);
+    void replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword);
 
 private:
     void set_font();
@@ -106,9 +105,9 @@ private:
     HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     void create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight);
 
-    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, TCHAR* args, TCHAR* cmd, int windowopt);
+    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
+        TCHAR* pydir, TCHAR* args, TCHAR* cmd, int windowopt, int index);
 
-    void add_combobox_item(const TCHAR* pszBuf);
     void select_combobox_item(int index);
     int get_combobox_index(TCHAR* itemstr);
 };

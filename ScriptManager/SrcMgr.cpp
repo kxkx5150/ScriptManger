@@ -2,7 +2,6 @@
 #include "resource.h"
 #include <CommCtrl.h>
 #include <shlobj.h>
-#include <string>
 #include <tchar.h>
 #pragma comment(lib, "Comctl32.lib")
 
@@ -93,7 +92,6 @@ void SrcMgr::set_script_value(int exeidx)
         }
         if (!item.empty())
             SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)item.c_str());
-
     }
 }
 void SrcMgr::reset_script_value()
@@ -112,12 +110,6 @@ void SrcMgr::reset_script_value()
     SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
     SendMessage(m_combohwnd, CB_SETCURSEL, -1, 0);
 }
-
-
-
-
-
-
 void SrcMgr::change_venv_checkbox()
 {
     if (BST_CHECKED == SendMessage(m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
@@ -153,11 +145,6 @@ void SrcMgr::change_script_path()
     //    EnableWindow(m_add_btnhwnd, false);
     //}
 }
-
-
-
-
-
 void SrcMgr::delete_script(int exeidx)
 {
     auto comcount = m_commands.size();
@@ -174,7 +161,7 @@ void SrcMgr::delete_script(int exeidx)
 void SrcMgr::delete_command(int exeidx)
 {
     Command cmd = m_commands[exeidx];
-    delete [] cmd.name;
+    delete[] cmd.name;
     delete[] cmd.exe;
     delete[] cmd.batpath;
     delete[] cmd.pypath;
@@ -183,12 +170,8 @@ void SrcMgr::delete_command(int exeidx)
     delete[] cmd.cmd;
     m_commands.erase(m_commands.begin() + exeidx);
 }
-
-
-
-
-
-void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, TCHAR* args, TCHAR* cmd, int windowopt)
+void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir, 
+    TCHAR* args, TCHAR* cmd, int windowopt, int index)
 {
     Command command;
     command.name = name;
@@ -199,11 +182,20 @@ void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
     command.args = args;
     command.cmd = cmd;
     command.windowopt = windowopt;
-    add_combobox_item(command.name);
-    m_commands.push_back(command);
-    reset_script_value();
+
+    if (index == -1) {
+        SendMessage(m_combohwnd, CB_ADDSTRING, 0, (LPARAM)command.name);
+        m_commands.push_back(command);
+        reset_script_value();
+    } else {
+        SendMessage(m_combohwnd, CB_DELETESTRING, index, 0);
+        SendMessage(m_combohwnd, CB_INSERTSTRING, index, (LPARAM)command.name);
+        SendMessage(m_combohwnd, CB_SETCURSEL, index, 0);
+        delete_command(index);
+        m_commands.insert(m_commands.begin() + index, command);
+    }
 }
-void replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword)
+void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword)
 {
     std::wstring sstr = std::wstring(strbuf);
     std::wstring::size_type Pos(sstr.find(sword));
@@ -241,7 +233,7 @@ void SrcMgr::exe_script(int exeidx)
         TCHAR* buftmp = new TCHAR[8191];
         wcscpy_s(buftmp, 8191, command.args);
         replace_string(buftmp, 8191, L"\n", L"\ ");
-        wcscat_s(args, 8191, buftmp); 
+        wcscat_s(args, 8191, buftmp);
     }
 
     ShellExecute(NULL, L"open", command.cmd, args, command.pydir, m_commands[exeidx].windowopt);
@@ -285,10 +277,10 @@ void SrcMgr::create_control()
     SetWindowSubclass(m_addgrouphwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_addgrouphwnd, GWLP_USERDATA, (LONG)this);
 
-    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 46, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
+    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 44, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
 
-    create_cmd_radiobutton(m_addgrouphwnd, 46, 226, 120, 25);
-    m_add_btnhwnd = create_button(m_addgrouphwnd, 53, 270, 100, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
+    create_cmd_radiobutton(m_addgrouphwnd, 44, 226, 120, 25);
+    m_add_btnhwnd = create_button(m_addgrouphwnd, 51, 270, 100, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
     m_update_btnhwnd = create_button(m_addgrouphwnd, 170, 270, 100, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
@@ -399,11 +391,6 @@ void SrcMgr::create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, in
         hParent, (HMENU)IDC_HIDECMD, m_hInst, NULL);
     SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
 }
-
-void SrcMgr::add_combobox_item(const TCHAR* pszBuf)
-{
-    SendMessage(m_combohwnd, CB_ADDSTRING, 0, (LPARAM)pszBuf);
-}
 void SrcMgr::select_combobox_item(int index)
 {
     m_activeidx = index;
@@ -429,11 +416,7 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu)
     }
 }
 
-
-
-
-
-void SrcMgr::click_add_script()
+void SrcMgr::click_add_script(int index)
 {
     TCHAR namebuf[MAX_PATH] = { '\0' };
     GetWindowText(m_name_edithwnd, namebuf, MAX_PATH);
@@ -512,7 +495,9 @@ void SrcMgr::click_add_script()
         dirpathbuf,
         argsbuf,
         cmd,
-        wopt);
+        wopt,
+        index
+    );
 }
 void SrcMgr::trim_tchar(TCHAR* pText)
 {
@@ -758,6 +743,11 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
             g_srcmgr->click_add_script();
         } break;
 
+        case ID_UPDATE_BUTTON: {
+            int exeidx = SendMessage(g_srcmgr->m_combohwnd, CB_GETCURSEL, 0, 0);
+            g_srcmgr->click_add_script(exeidx);
+        } break;
+
         case IDC_ADD_ARG_BUTTON: {
             g_srcmgr->click_add_arg();
         } break;
@@ -774,15 +764,9 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
             g_srcmgr->click_down_arg();
         } break;
 
-
-
         case ID_COMB_DELETE: {
             g_srcmgr->delete_script();
         } break;
-
-
-
-
         }
     } break;
 
