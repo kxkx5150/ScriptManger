@@ -2,6 +2,13 @@
 #include "SrcMgr.h"
 #include "framework.h"
 
+bool systray = true;
+NOTIFYICONDATA g_nid;
+HMENU hPopMenu;
+int main_window_width = 340;
+int main_window_height = 544;
+int add_group_height = 329;
+
 #define MAX_LOADSTRING 100
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
@@ -28,9 +35,16 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 }
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
+    RECT rect;
+    HWND hDeskWnd = GetDesktopWindow();
+    GetWindowRect(hDeskWnd, &rect);
+    int left = (rect.right - rect.left) / 2 - main_window_width / 2;
+    int top = (rect.bottom - rect.top) / 2 - main_window_height / 2;
+
     hInst = hInstance;
-    HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPED | WS_SYSMENU,
-        CW_USEDEFAULT, 0, 340, 544, nullptr, nullptr, hInstance, nullptr);
+    HWND hWnd = CreateWindow(szWindowClass, szTitle,
+        WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX,
+        left, top, main_window_width, main_window_height, nullptr, nullptr, hInstance, nullptr);
     if (!hWnd) {
         return FALSE;
     }
@@ -38,6 +52,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     UpdateWindow(hWnd);
     return TRUE;
 }
+
 void toggle_check_menu(HWND hWnd, int menuid)
 {
     bool chkflg;
@@ -46,13 +61,15 @@ void toggle_check_menu(HWND hWnd, int menuid)
     if (uState & MFS_CHECKED) {
         chkflg = false;
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
+        main_window_height = 215;
     } else {
         chkflg = true;
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
+        main_window_height = 544;
     }
 
     if (g_script_manager) {
-        g_script_manager->resize_window(hWnd, chkflg);
+        g_script_manager->resize_window(hWnd, chkflg, add_group_height);
     }
 }
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
@@ -80,6 +97,38 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
     return (int)msg.wParam;
 }
+void create_trayicon(HWND hWnd)
+{
+    if (!systray)
+        return;
+    g_nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
+    g_nid.hWnd = hWnd;
+    g_nid.uID = IDR_MAINFRAME;
+    g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    g_nid.uCallbackMessage = WM_TO_TRAY;
+    g_nid.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON1));
+    wcscpy_s(g_nid.szTip, _T("Script Manager"));
+    Shell_NotifyIcon(NIM_ADD, &g_nid);
+    ShowWindow(hWnd, SW_HIDE);
+}
+void show_main_window(HWND hWnd)
+{
+    if (!systray)
+        return;
+    POINT p;
+    GetCursorPos(&p);
+    SetForegroundWindow(hWnd);
+    ShowWindow(hWnd, SW_SHOWNORMAL);
+    SetWindowPos(hWnd, NULL, p.x - main_window_width, p.y - main_window_height - 16, 0, 0, SWP_NOSIZE);
+}
+void createContextMenu()
+{
+    hPopMenu = CreatePopupMenu();
+    AppendMenu(hPopMenu, MF_BYPOSITION | MF_STRING, IDC_RMENU_TERMINAL, L"Terminal");
+    AppendMenu(hPopMenu, MF_BYPOSITION | MF_STRING, IDC_RMENU_TERMINAL_AS, L"Terminal (admin)");
+    AppendMenu(hPopMenu, MF_SEPARATOR, NULL, _T("SEP"));
+    AppendMenu(hPopMenu, MF_BYPOSITION | MF_STRING, IDM_EXIT, L"Exit");
+}
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -99,19 +148,28 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
+
     case WM_COMMAND: {
         switch (LOWORD(wParam)) {
+
         case IDM_ABOUT:
             DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+            break;
+
+        case IDC_RMENU_TERMINAL:
+            ShellExecute(NULL, L"", L"wt.exe", L"", L"", SW_SHOWNORMAL);
+            break;
+
+        case IDC_RMENU_TERMINAL_AS:
+            ShellExecute(NULL, L"runas", L"wt.exe", L"", L"", SW_SHOWNORMAL);
             break;
 
         case IDM_EXIT:
             DestroyWindow(hWnd);
             break;
 
-
         case IDC_COMBO:
-		    if (HIWORD(wParam) == CBN_SELCHANGE) {
+            if (HIWORD(wParam) == CBN_SELCHANGE) {
                 g_script_manager->change_select_combobox();
             }
             break;
@@ -128,9 +186,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_script_manager->delete_script();
             break;
 
-
-            
-
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
@@ -140,6 +195,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
         EndPaint(hWnd, &ps);
+    } break;
+
+    case WM_SIZE: {
+        if (wParam == SIZE_MINIMIZED) {
+            if (!systray)
+                return 0;
+            ShowWindow(hWnd, SW_HIDE);
+        }
+    } break;
+
+    case WM_TO_TRAY: {
+        if (lParam == WM_LBUTTONDOWN) {
+            show_main_window(hWnd);
+
+        } else if (lParam == WM_RBUTTONUP) {
+            POINT p;
+            GetCursorPos(&p);
+            SetForegroundWindow(hWnd);
+            TrackPopupMenu(hPopMenu,
+                TPM_RIGHTALIGN | TPM_LEFTBUTTON,
+                p.x, p.y, 0, hWnd, NULL);
+        }
     } break;
 
     case WM_CTLCOLORSTATIC: {
@@ -156,10 +233,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_script_manager = new SrcMgr(hWnd, hInst);
         g_script_manager->init();
         g_script_manager->read_setting_csv();
+        createContextMenu();
+        create_trayicon(hWnd);
 
     } break;
 
+    case WM_CLOSE: {
+        ShowWindow(hWnd, SW_HIDE);
+    } break;
+
     case WM_DESTROY: {
+        Shell_NotifyIcon(NIM_DELETE, &g_nid);
         PostQuitMessage(0);
     } break;
 

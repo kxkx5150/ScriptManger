@@ -403,13 +403,12 @@ int SrcMgr::get_combobox_index(TCHAR* itemstr)
     WPARAM index = SendMessage(m_combohwnd, CB_FINDSTRINGEXACT, -1, (LPARAM)itemstr);
     return index;
 }
-void SrcMgr::resize_window(HWND hWnd, bool addmenu)
+void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
 {
     RECT rc;
     GetWindowRect(hWnd, &rc);
     int cx = rc.right - rc.left;
     int cy = rc.bottom - rc.top;
-    int addarea = 329;
 
     if (addmenu) {
         ShowWindow(m_addgrouphwnd, SW_SHOWNORMAL);

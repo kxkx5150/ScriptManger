@@ -68,7 +68,7 @@ public:
     ~SrcMgr();
 
     void init();
-    void resize_window(HWND hWnd, bool addmenu);
+    void resize_window(HWND hWnd, bool addmenu, int addarea);
 
     void change_venv_checkbox();
     void change_select_combobox();
