@@ -314,12 +314,16 @@ void SrcMgr::create_control()
     m_sshFont = create_font(10);
     m_lsthFont = create_font(12);
 
-    m_combohwnd = create_combobox(m_prnthwnd, 6, 2, 180, 200, IDC_COMBO);
-    m_run_btnhwnd = create_button(m_prnthwnd, 190, 1, 76, 26, ID_EXE, (TCHAR*)L"Run");
-    m_delete_btnhwnd = create_button(m_prnthwnd, 269, 1, 54, 26, ID_COMB_DELETE, (TCHAR*)L"Delete");
 
-    m_dropgrouphwnd = create_group(m_prnthwnd, 2, 34, 320, 120, (TCHAR*)L"Drop argument files");
-    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 106);
+    m_combogrouphwnd = create_group(m_prnthwnd, 2, 1, 320, 44, (TCHAR*)L"");
+    m_combohwnd = create_combobox(m_combogrouphwnd, 2, 14, 180, 200, IDC_COMBO);
+    m_run_btnhwnd = create_button(m_combogrouphwnd, 185, 13, 76, 26, ID_EXE, (TCHAR*)L"Run");
+    m_delete_btnhwnd = create_button(m_combogrouphwnd, 263, 13, 54, 26, ID_COMB_DELETE, (TCHAR*)L"Delete");
+
+
+
+    m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L"Drop argument files");
+    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 96);
     m_addarghwnd = create_button(m_dropgrouphwnd, 300, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
     m_delarghwnd = create_button(m_dropgrouphwnd, 300, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
     m_uparghwnd = create_button(m_dropgrouphwnd, 300, 58, 18, 22, IDC_UP_ARG_BUTTON, (TCHAR*)L"Å™");

@@ -39,6 +39,9 @@ private:
     HFONT m_sshFont = nullptr;
     HFONT m_lsthFont = nullptr;
 
+
+    HWND m_combogrouphwnd = nullptr;
+
     HWND m_run_btnhwnd = nullptr;
     HWND m_delete_btnhwnd = nullptr;
 
