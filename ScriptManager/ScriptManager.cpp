@@ -71,6 +71,18 @@ void toggle_check_menu(HWND hWnd, int menuid)
         g_script_manager->resize_window(hWnd, chkflg, add_group_height);
     }
 }
+void toggle_sys_tray(HWND hWnd, int menuid)
+{
+    HMENU hmenu = GetMenu(hWnd);
+    systray = !systray;
+    if (systray) {
+        CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
+        Shell_NotifyIcon(NIM_ADD, &g_nid);
+    } else {
+        CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
+        Shell_NotifyIcon(NIM_DELETE, &g_nid);
+    }
+}
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
@@ -177,6 +189,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             toggle_check_menu(hWnd, ID_SCRIPT_ADD);
             break;
 
+        case ID_MENU_SYSTEMTRAY: {
+            toggle_sys_tray(hWnd, ID_MENU_SYSTEMTRAY);
+        } break;
+
         case ID_EXE:
             g_script_manager->exe_script();
             break;
@@ -237,9 +253,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     } break;
 
-    //case WM_CLOSE: {
-    //    ShowWindow(hWnd, SW_HIDE);
-    //} break;
+        //case WM_CLOSE: {
+        //    ShowWindow(hWnd, SW_HIDE);
+        //} break;
 
     case WM_DESTROY: {
         Shell_NotifyIcon(NIM_DELETE, &g_nid);

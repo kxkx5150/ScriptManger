@@ -32,6 +32,8 @@
 #define IDC_STORE_ARGS_CHKBOX           165
 #define ID_COMB_DELETE                  168
 #define ID_UPDATE_BUTTON                169
+#define ID_CLEAR_BUTTON					170
+
 #define IDD_ABOUTBOX                    173
 #define IDC_ADDGROUP                    175
 #define IDB_BITMAP1                     183

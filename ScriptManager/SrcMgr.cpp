@@ -1,4 +1,5 @@
 #include "SrcMgr.h"
+#include "Unicode.h"
 #include "resource.h"
 #include <CommCtrl.h>
 #include <fstream>
@@ -6,7 +7,6 @@
 #include <shlobj.h>
 #include <sstream>
 #include <utility>
-#include "Unicode.h"
 #pragma comment(lib, "Comctl32.lib")
 
 SrcMgr* g_srcmgr;
@@ -241,18 +241,18 @@ int SrcMgr::write_file(TCHAR* filename, TCHAR* args)
     if (hFile == INVALID_HANDLE_VALUE)
         return 0;
     CloseHandle(hFile);
-    HANDLE hFile2 = CreateFile(m_Path,
+    hFile = CreateFile(m_Path,
         GENERIC_WRITE,
         0,
         NULL,
         TRUNCATE_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
         NULL);
-    if (hFile2 == INVALID_HANDLE_VALUE)
+    if (hFile == INVALID_HANDLE_VALUE)
         return 0;
     DWORD written;
-    WriteFile(hFile2, bufstr, *u8len * sizeof(UTF8), &written, NULL);
-    CloseHandle(hFile2);
+    WriteFile(hFile, bufstr, *u8len * sizeof(UTF8), &written, NULL);
+    CloseHandle(hFile);
 
     delete[] u8str;
     delete[] bufstr;
@@ -283,20 +283,19 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(args, 8191, command.pypath);
     wcscat_s(args, 8191, L"\"");
 
+    if (0 < _tcslen(command.args)) {
+        wcscat_s(args, 8191, L" ");
+        TCHAR* buftmp = new TCHAR[8191];
+        wcscpy_s(buftmp, 8191, command.args);
+        replace_string(buftmp, 8191, L"\n", L"\ ");
+        wcscat_s(args, 8191, buftmp);
+    }
+
     TCHAR bat[MAX_PATH] = L"/k \"";
     TCHAR batpath[MAX_PATH] = L"exe.bat";
     write_file(batpath, args);
     wcscat_s(bat, MAX_PATH, batpath);
     wcscat_s(bat, MAX_PATH, L"\"");
-
-    //if (0 < _tcslen(command.args)) {
-    //    wcscat_s(args, 8191, L" ");
-    //    TCHAR* buftmp = new TCHAR[8191];
-    //    wcscpy_s(buftmp, 8191, command.args);
-    //    replace_string(buftmp, 8191, L"\n", L"\ ");
-    //    wcscat_s(args, 8191, buftmp);
-    //}
-    //wcscat_s(args, 8191, L"\"");
 
     TCHAR* pdir = new TCHAR[MAX_PATH];
     pdir[0] = '\0';
@@ -336,7 +335,7 @@ void SrcMgr::create_control()
     m_src_pathhwnd = create_edittext(m_addgrouphwnd, 4, 76, 284, 18, IDC_SRCPATH, (TCHAR*)L"");
     m_src_filebtn = create_button(m_addgrouphwnd, 292, 75, 26, 19, IDC_SRC_BUTTON, (TCHAR*)L"...");
 
-    m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 4, 102, 200, 18, IDC_VENVCHK, (TCHAR*)L"Use venv (pre-exec *.bat)");
+    m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 5, 102, 200, 18, IDC_VENVCHK, (TCHAR*)L"Use venv (pre-exec *.bat)");
     m_venv_pathhwnd = create_edittext(m_addgrouphwnd, 4, 120, 284, 18, IDC_VENVPATH, (TCHAR*)L"");
     m_venv_dirbtn = create_button(m_addgrouphwnd, 292, 119, 26, 19, IDC_VENV_BUTTON, (TCHAR*)L"...");
 
@@ -347,9 +346,10 @@ void SrcMgr::create_control()
 
     m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 44, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
 
-    create_cmd_radiobutton(m_addgrouphwnd, 44, 226, 120, 25);
-    m_add_btnhwnd = create_button(m_addgrouphwnd, 49, 270, 100, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
-    m_update_btnhwnd = create_button(m_addgrouphwnd, 170, 270, 100, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
+    create_cmd_radiobutton(m_addgrouphwnd, 42, 226, 120, 25);
+    m_add_btnhwnd = create_button(m_addgrouphwnd, 16, 270, 90, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
+    m_update_btnhwnd = create_button(m_addgrouphwnd, 115, 270, 90, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
+    m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
     Edit_SetCueBannerText(m_cmd_edithwnd, L"*.exe");
@@ -782,6 +782,8 @@ void SrcMgr::open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt)
             DWORD dwAttrib = GetFileAttributes(vevnstr.c_str());
             if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
                 SetWindowText(g_srcmgr->m_venv_pathhwnd, vevnstr.c_str());
+                SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+                change_venv_checkbox();
             }
         }
     }
@@ -887,6 +889,10 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
             int exeidx = SendMessage(g_srcmgr->m_combohwnd, CB_GETCURSEL, 0, 0);
             SendMessage(g_srcmgr->m_combohwnd, CB_DELETESTRING, exeidx, 0);
             g_srcmgr->click_add_script(exeidx);
+        } break;
+
+        case ID_CLEAR_BUTTON: {
+            g_srcmgr->reset_script_value();
         } break;
 
         case IDC_ADD_ARG_BUTTON: {

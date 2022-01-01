@@ -49,8 +49,10 @@ private:
     HWND m_hidecmdhwnd = nullptr;
     HWND m_addgrouphwnd = nullptr;
     HWND m_dropgrouphwnd = nullptr;
+
     HWND m_add_btnhwnd = nullptr;
     HWND m_update_btnhwnd = nullptr;
+    HWND m_clear_btnhwnd = nullptr;
 
     HWND m_addarghwnd = nullptr;
     HWND m_delarghwnd = nullptr;
