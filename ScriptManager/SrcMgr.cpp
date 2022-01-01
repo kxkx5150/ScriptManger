@@ -304,7 +304,7 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(pdir, MAX_PATH, command.pydir);
     wcscat_s(pdir, MAX_PATH, L"\"");
 
-    ShellExecute(NULL, L"open", command.cmd, bat, L"", m_commands[exeidx].windowopt);
+    ShellExecute(NULL, L"open", command.cmd, bat, pdir, m_commands[exeidx].windowopt);
     delete[] args;
 }
 void SrcMgr::create_control()
