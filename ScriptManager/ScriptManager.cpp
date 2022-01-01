@@ -52,7 +52,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     UpdateWindow(hWnd);
     return TRUE;
 }
-
 void toggle_check_menu(HWND hWnd, int menuid)
 {
     bool chkflg;
@@ -119,7 +118,7 @@ void show_main_window(HWND hWnd)
     GetCursorPos(&p);
     SetForegroundWindow(hWnd);
     ShowWindow(hWnd, SW_SHOWNORMAL);
-    SetWindowPos(hWnd, NULL, p.x - main_window_width, p.y - main_window_height - 16, 0, 0, SWP_NOSIZE);
+    SetWindowPos(hWnd, NULL, p.x - main_window_width, p.y - main_window_height - 20, 0, 0, SWP_NOSIZE);
 }
 void createContextMenu()
 {
@@ -238,9 +237,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     } break;
 
-    case WM_CLOSE: {
-        ShowWindow(hWnd, SW_HIDE);
-    } break;
+    //case WM_CLOSE: {
+    //    ShowWindow(hWnd, SW_HIDE);
+    //} break;
 
     case WM_DESTROY: {
         Shell_NotifyIcon(NIM_DELETE, &g_nid);

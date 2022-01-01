@@ -207,6 +207,50 @@ void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::
     }
     wcscpy_s(strbuf, maxlen, sstr.c_str());
 }
+int SrcMgr::write_file(TCHAR* filename, TCHAR* args)
+{
+    TCHAR m_Path[MAX_PATH] = { '\0' };
+    GetModuleFileName(NULL, m_Path, MAX_PATH);
+    TCHAR* ptmp = _tcsrchr(m_Path, _T('\\'));
+    if (ptmp != NULL) {
+        ptmp = _tcsinc(ptmp);
+        *ptmp = '\0';
+    }
+    wcscat_s(m_Path, MAX_PATH, filename);
+
+    HANDLE hFile = CreateFile(m_Path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return 0;
+    CloseHandle(hFile);
+    HANDLE hFile2 = CreateFile(m_Path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        TRUNCATE_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (hFile2 == INVALID_HANDLE_VALUE)
+        return 0;
+    DWORD written;
+    WriteFile(hFile2, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
+    CloseHandle(hFile2);
+}
+void SrcMgr::create_bat(Command command)
+{
+    TCHAR* args = new TCHAR[MAX_PATH];
+    args[0] = '\0';
+    wcscat_s(args, MAX_PATH, L"call \"");
+    wcscat_s(args, MAX_PATH, command.batpath);
+    wcscat_s(args, MAX_PATH, L"\"");
+    write_file((TCHAR*)L"exe.bat", args);
+}
 void SrcMgr::exe_script(int exeidx)
 {
     auto comcount = m_commands.size();
@@ -214,31 +258,48 @@ void SrcMgr::exe_script(int exeidx)
         return;
     if (exeidx == -1)
         exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
-
     Command command = m_commands[exeidx];
-    TCHAR* args = new TCHAR[8191];
+    create_bat(command);
+    return;
+
+    TCHAR* args = new TCHAR[MAX_PATH];
     args[0] = '\0';
-    wcscat_s(args, 8191, L"/k");
+    wcscat_s(args, MAX_PATH, L"/K");
     if (_tcslen(command.batpath) > 0) {
-        wcscat_s(args, 8191, L" ");
-        wcscat_s(args, 8191, command.batpath);
-        wcscat_s(args, 8191, L" & ");
-    } else {
-        wcscat_s(args, 8191, L" ");
-    }
-    wcscat_s(args, 8191, command.exe);
-    wcscat_s(args, 8191, L" ");
-    wcscat_s(args, 8191, command.pypath);
-
-    if (0 < _tcslen(command.args)) {
-        wcscat_s(args, 8191, L" ");
-        TCHAR* buftmp = new TCHAR[8191];
-        wcscpy_s(buftmp, 8191, command.args);
-        replace_string(buftmp, 8191, L"\n", L"\ ");
-        wcscat_s(args, 8191, buftmp);
+        wcscat_s(args, MAX_PATH, L" \"");
+        wcscat_s(args, MAX_PATH, command.batpath);
+        wcscat_s(args, MAX_PATH, L"\"");
+        //wcscat_s(args, 8191, L" &&");
     }
 
-    ShellExecute(NULL, L"open", command.cmd, args, command.pydir, m_commands[exeidx].windowopt);
+    //wcscat_s(args, 8191, L"\ ");
+    //wcscat_s(args, 8191, command.exe);
+    //wcscat_s(args, 8191, L"\ ");
+
+    //TCHAR* args2 = new TCHAR[8191];
+    //args2[0] = '\0';
+    //wcscat_s(args2, 8191, L"\"");
+    //wcscat_s(args2, 8191, command.pypath);
+    //wcscat_s(args2, 8191, L"\"");
+
+    //wcscat_s(args, 8191, args2);
+
+    //if (0 < _tcslen(command.args)) {
+    //    wcscat_s(args, 8191, L" ");
+    //    TCHAR* buftmp = new TCHAR[8191];
+    //    wcscpy_s(buftmp, 8191, command.args);
+    //    replace_string(buftmp, 8191, L"\n", L"\ ");
+    //    wcscat_s(args, 8191, buftmp);
+    //}
+    //wcscat_s(args, 8191, L"\"");
+
+    TCHAR* pdir = new TCHAR[MAX_PATH];
+    pdir[0] = '\0';
+    wcscat_s(pdir, MAX_PATH, L"\"");
+    wcscat_s(pdir, MAX_PATH, command.pydir);
+    wcscat_s(pdir, MAX_PATH, L"\"");
+
+    ShellExecute(NULL, L"open", command.cmd, args, L"", m_commands[exeidx].windowopt);
     delete[] args;
 }
 void SrcMgr::create_control()
@@ -270,7 +331,7 @@ void SrcMgr::create_control()
     m_src_pathhwnd = create_edittext(m_addgrouphwnd, 4, 76, 284, 18, IDC_SRCPATH, (TCHAR*)L"");
     m_src_filebtn = create_button(m_addgrouphwnd, 292, 75, 26, 19, IDC_SRC_BUTTON, (TCHAR*)L"...");
 
-    m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 4, 102, 76, 18, IDC_VENVCHK, (TCHAR*)L"Use venv");
+    m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 4, 102, 200, 18, IDC_VENVCHK, (TCHAR*)L"Use venv (pre-exec *.bat)");
     m_venv_pathhwnd = create_edittext(m_addgrouphwnd, 4, 120, 284, 18, IDC_VENVPATH, (TCHAR*)L"");
     m_venv_dirbtn = create_button(m_addgrouphwnd, 292, 119, 26, 19, IDC_VENV_BUTTON, (TCHAR*)L"...");
 
@@ -287,7 +348,7 @@ void SrcMgr::create_control()
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
     Edit_SetCueBannerText(m_cmd_edithwnd, L"*.exe");
-    Edit_SetCueBannerText(m_venv_pathhwnd, L"venv activate script path");
+    Edit_SetCueBannerText(m_venv_pathhwnd, L"venv activate.bat path");
     Edit_SetCueBannerText(m_src_pathhwnd, L"Script path");
     Edit_SetCueBannerText(m_dir_pathhwnd, L"Working directory");
 
