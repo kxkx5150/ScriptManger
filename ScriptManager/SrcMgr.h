@@ -96,8 +96,8 @@ public:
 
     void write_setting_csv();
     void read_setting_csv();
-    void create_bat(Command command);
     int write_file(TCHAR* filename, TCHAR* args);
+    void exe_directory(TCHAR* path);
 
 
 private:

@@ -207,49 +207,46 @@ void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::
     }
     wcscpy_s(strbuf, maxlen, sstr.c_str());
 }
-int SrcMgr::write_file(TCHAR* filename, TCHAR* args)
+void SrcMgr::exe_directory(TCHAR* path)
 {
-    TCHAR m_Path[MAX_PATH] = { '\0' };
-    GetModuleFileName(NULL, m_Path, MAX_PATH);
-    TCHAR* ptmp = _tcsrchr(m_Path, _T('\\'));
+    GetModuleFileName(NULL, path, MAX_PATH);
+    TCHAR* ptmp = _tcsrchr(path, _T('\\'));
     if (ptmp != NULL) {
         ptmp = _tcsinc(ptmp);
         *ptmp = '\0';
     }
-    wcscat_s(m_Path, MAX_PATH, filename);
-
-    HANDLE hFile = CreateFile(m_Path,
-        GENERIC_WRITE,
-        0,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE)
-        return 0;
-    CloseHandle(hFile);
-    HANDLE hFile2 = CreateFile(m_Path,
-        GENERIC_WRITE,
-        0,
-        NULL,
-        TRUNCATE_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
-    if (hFile2 == INVALID_HANDLE_VALUE)
-        return 0;
-    DWORD written;
-    WriteFile(hFile2, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
-    CloseHandle(hFile2);
 }
-void SrcMgr::create_bat(Command command)
+int SrcMgr::write_file(TCHAR* filename, TCHAR* args)
 {
-    TCHAR* args = new TCHAR[MAX_PATH];
-    args[0] = '\0';
-    wcscat_s(args, MAX_PATH, L"call \"");
-    wcscat_s(args, MAX_PATH, command.batpath);
-    wcscat_s(args, MAX_PATH, L"\"");
-    write_file((TCHAR*)L"exe.bat", args);
+    TCHAR m_Path[MAX_PATH] = { '\0' };
+    exe_directory(m_Path);
+    wcscat_s(m_Path, MAX_PATH, filename);
+    wcscpy_s(filename, MAX_PATH, m_Path);
+
+    //HANDLE hFile = CreateFile(m_Path,
+    //    GENERIC_WRITE,
+    //    0,
+    //    NULL,
+    //    CREATE_ALWAYS,
+    //    FILE_ATTRIBUTE_NORMAL,
+    //    NULL);
+
+    //if (hFile == INVALID_HANDLE_VALUE)
+    //    return 0;
+    //CloseHandle(hFile);
+    //HANDLE hFile2 = CreateFile(m_Path,
+    //    GENERIC_WRITE,
+    //    0,
+    //    NULL,
+    //    TRUNCATE_EXISTING,
+    //    FILE_ATTRIBUTE_NORMAL,
+    //    NULL);
+    //if (hFile2 == INVALID_HANDLE_VALUE)
+    //    return 0;
+    //DWORD written;
+    //WriteFile(hFile2, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
+    //CloseHandle(hFile2);
+    return 0;
 }
 void SrcMgr::exe_script(int exeidx)
 {
@@ -259,30 +256,32 @@ void SrcMgr::exe_script(int exeidx)
     if (exeidx == -1)
         exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
     Command command = m_commands[exeidx];
-    create_bat(command);
-    return;
 
-    TCHAR* args = new TCHAR[MAX_PATH];
+    TCHAR* args = new TCHAR[8191];
     args[0] = '\0';
-    wcscat_s(args, MAX_PATH, L"/K");
     if (_tcslen(command.batpath) > 0) {
-        wcscat_s(args, MAX_PATH, L" \"");
-        wcscat_s(args, MAX_PATH, command.batpath);
-        wcscat_s(args, MAX_PATH, L"\"");
-        //wcscat_s(args, 8191, L" &&");
+        wcscat_s(args, 8191, L"call");
+        wcscat_s(args, 8191, L" \"");
+        wcscat_s(args, 8191, command.batpath);
+        wcscat_s(args, 8191, L"\"");
     }
 
-    //wcscat_s(args, 8191, L"\ ");
-    //wcscat_s(args, 8191, command.exe);
-    //wcscat_s(args, 8191, L"\ ");
+    wcscat_s(args, 8191, L"\r\n");
+    wcscat_s(args, 8191, command.exe);
+    wcscat_s(args, 8191, L"\ ");
+    wcscat_s(args, 8191, L"\"");
+    wcscat_s(args, 8191, command.pypath);
+    wcscat_s(args, 8191, L"\"");
 
-    //TCHAR* args2 = new TCHAR[8191];
-    //args2[0] = '\0';
-    //wcscat_s(args2, 8191, L"\"");
-    //wcscat_s(args2, 8191, command.pypath);
-    //wcscat_s(args2, 8191, L"\"");
+    TCHAR bat[MAX_PATH] = L"/k \"";
+    TCHAR batpath[MAX_PATH] = L"exe.bat";
+    write_file(batpath, args);
+    //write_file(batpath, (TCHAR*)L"echo aaaa");
 
-    //wcscat_s(args, 8191, args2);
+
+
+    wcscat_s(bat, MAX_PATH, batpath);
+    wcscat_s(bat, MAX_PATH, L"\"");
 
     //if (0 < _tcslen(command.args)) {
     //    wcscat_s(args, 8191, L" ");
@@ -299,7 +298,7 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(pdir, MAX_PATH, command.pydir);
     wcscat_s(pdir, MAX_PATH, L"\"");
 
-    ShellExecute(NULL, L"open", command.cmd, args, L"", m_commands[exeidx].windowopt);
+    ShellExecute(NULL, L"open", command.cmd, bat, L"", m_commands[exeidx].windowopt);
     delete[] args;
 }
 void SrcMgr::create_control()
@@ -772,11 +771,10 @@ void SrcMgr::open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt)
             dirstr = dirstr.substr(0, dirstr.find_last_of(L"/\\"));
             SetWindowText(g_srcmgr->m_dir_pathhwnd, dirstr.c_str());
 
-            std::wstring vevnstr = L"\\venv";
+            std::wstring vevnstr = L"\\venv\\Scripts\\activate.bat";
             vevnstr = dirstr + vevnstr;
-
             DWORD dwAttrib = GetFileAttributes(vevnstr.c_str());
-            if (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
                 SetWindowText(g_srcmgr->m_venv_pathhwnd, vevnstr.c_str());
             }
         }
