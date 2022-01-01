@@ -32,8 +32,7 @@
 #define IDC_STORE_ARGS_CHKBOX           165
 #define ID_COMB_DELETE                  168
 #define ID_UPDATE_BUTTON                169
-#define ID_CLEAR_BUTTON					170
-
+#define ID_CLEAR_BUTTON                 170
 #define IDD_ABOUTBOX                    173
 #define IDC_ADDGROUP                    175
 #define IDB_BITMAP1                     183
@@ -43,12 +42,11 @@
 #define IDC_ARG_OK_BUTTON               1002
 #define IDC_ARG_CANCEL_BUTTON           1004
 #define WM_TO_TRAY                      1005
-#define IDC_RMENU_TERMINAL				1009
-#define IDC_RMENU_TERMINAL_AS			1010
+#define IDC_RMENU_TERMINAL              1009
+#define IDC_RMENU_TERMINAL_AS           1010
 #define IDC_ARG_EDIT                    1011
-#define IDC_RMENU_MAIN					1012
-#define IDC_RMENU_SCRIPT				10235
-
+#define IDC_RMENU_MAIN                  1012
+#define IDC_RMENU_SCRIPT                10235
 #define ID_32771                        32771
 #define ID_EXE                          32772
 #define ID_SCRIPT_ADD                   32773
@@ -56,6 +54,7 @@
 #define ID_SCRIPT_CLOSE                 32775
 #define ID_MENU_ABOUT                   32776
 #define ID_MENU_SYSTEMTRAY              32777
+#define ID_MENU_STARTUP                 32778
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -64,7 +63,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        138
-#define _APS_NEXT_COMMAND_VALUE         32778
+#define _APS_NEXT_COMMAND_VALUE         32779
 #define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

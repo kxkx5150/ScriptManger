@@ -52,6 +52,46 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     UpdateWindow(hWnd);
     return TRUE;
 }
+int setStartUp(HWND hWnd)
+{
+    TCHAR szPath[MAX_PATH];
+    DWORD pathLen = GetModuleFileName(NULL, szPath, MAX_PATH);
+    if (pathLen == 0) {
+        return -1;
+    }
+    HKEY newValue;
+    if (RegOpenKey(HKEY_CURRENT_USER,
+            TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
+            &newValue)
+        != ERROR_SUCCESS) {
+        OutputDebugString(L"Error2");
+        return -1;
+    }
+
+    HMENU hmenu = GetMenu(hWnd);
+    UINT uState = GetMenuState(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND);
+    if (uState & MFS_CHECKED) {
+        RegDeleteValue(newValue, TEXT("Script_Manager_kxkx5150"));
+        CheckMenuItem(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND | MFS_UNCHECKED);
+
+    } else {
+        DWORD pathLenInBytes = pathLen * sizeof(*szPath);
+        if (RegSetValueEx(newValue,
+                TEXT("Script_Manager_kxkx5150"),
+                0,
+                REG_SZ,
+                (LPBYTE)szPath,
+                pathLenInBytes)
+            != ERROR_SUCCESS) {
+            RegCloseKey(newValue);
+            return -1;
+        }
+        CheckMenuItem(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND | MFS_CHECKED);
+    }
+
+    RegCloseKey(newValue);
+    return 0;
+}
 void toggle_check_menu(HWND hWnd, int menuid)
 {
     bool chkflg;
@@ -191,6 +231,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case ID_MENU_SYSTEMTRAY: {
             toggle_sys_tray(hWnd, ID_MENU_SYSTEMTRAY);
+        } break;
+
+        case ID_MENU_STARTUP: {
+            setStartUp(hWnd);
         } break;
 
         case ID_EXE:

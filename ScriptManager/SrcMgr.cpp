@@ -284,11 +284,12 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(args, 8191, L"\"");
 
     if (0 < _tcslen(command.args)) {
-        wcscat_s(args, 8191, L" ");
+        wcscat_s(args, 8191, L" \"");
         TCHAR* buftmp = new TCHAR[8191];
         wcscpy_s(buftmp, 8191, command.args);
-        replace_string(buftmp, 8191, L"\n", L"\ ");
+        replace_string(buftmp, 8191, L"\n", L"\" \"");
         wcscat_s(args, 8191, buftmp);
+        wcscat_s(args, 8191, L"\"");
     }
 
     TCHAR bat[MAX_PATH] = L"/k \"";
@@ -665,9 +666,7 @@ void SrcMgr::drop_files_into_listbox(HDROP hdrop)
     int num = DragQueryFile(hdrop, -1, NULL, 0);
     for (int i = 0; i < num; i++) {
         DragQueryFile(hdrop, i, _filepath, sizeof(_filepath) / sizeof(TCHAR));
-        wcscat_s(filepath, MAX_PATH, L"\"");
         wcscat_s(filepath, MAX_PATH, _filepath);
-        wcscat_s(filepath, MAX_PATH, L"\"");
         SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)filepath);
         _filepath[0] = '\0';
         filepath[0] = '\0';
