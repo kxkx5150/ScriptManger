@@ -6,6 +6,7 @@
 #include <shlobj.h>
 #include <sstream>
 #include <utility>
+#include "Unicode.h"
 #pragma comment(lib, "Comctl32.lib")
 
 SrcMgr* g_srcmgr;
@@ -223,29 +224,37 @@ int SrcMgr::write_file(TCHAR* filename, TCHAR* args)
     wcscat_s(m_Path, MAX_PATH, filename);
     wcscpy_s(filename, MAX_PATH, m_Path);
 
-    //HANDLE hFile = CreateFile(m_Path,
-    //    GENERIC_WRITE,
-    //    0,
-    //    NULL,
-    //    CREATE_ALWAYS,
-    //    FILE_ATTRIBUTE_NORMAL,
-    //    NULL);
+    size_t uuu = 100000;
+    size_t* u8len = &uuu;
+    TCHAR u8str[MAX_PATH] = { '\0' };
+    UTF8* bufstr = new UTF8[MAX_PATH];
+    utf16_to_utf8(args, _tcslen(args), bufstr, u8len);
+    bufstr[*u8len] = '\0';
 
-    //if (hFile == INVALID_HANDLE_VALUE)
-    //    return 0;
-    //CloseHandle(hFile);
-    //HANDLE hFile2 = CreateFile(m_Path,
-    //    GENERIC_WRITE,
-    //    0,
-    //    NULL,
-    //    TRUNCATE_EXISTING,
-    //    FILE_ATTRIBUTE_NORMAL,
-    //    NULL);
-    //if (hFile2 == INVALID_HANDLE_VALUE)
-    //    return 0;
-    //DWORD written;
-    //WriteFile(hFile2, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
-    //CloseHandle(hFile2);
+
+    HANDLE hFile = CreateFile(m_Path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return 0;
+    CloseHandle(hFile);
+    HANDLE hFile2 = CreateFile(m_Path,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        TRUNCATE_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (hFile2 == INVALID_HANDLE_VALUE)
+        return 0;
+    DWORD written;
+    WriteFile(hFile2, bufstr, *u8len * sizeof(UTF8), &written, NULL);
+    CloseHandle(hFile2);
     return 0;
 }
 void SrcMgr::exe_script(int exeidx)
@@ -278,7 +287,7 @@ void SrcMgr::exe_script(int exeidx)
     write_file(batpath, args);
     //write_file(batpath, (TCHAR*)L"echo aaaa");
 
-
+     
 
     wcscat_s(bat, MAX_PATH, batpath);
     wcscat_s(bat, MAX_PATH, L"\"");
@@ -906,7 +915,7 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     } break;
 
     case WM_NCDESTROY:
-        g_srcmgr->write_setting_csv();
+        //g_srcmgr->write_setting_csv();
         RemoveWindowSubclass(hWnd, SubclassWindowProc, uIdSubclass);
         break;
     }
