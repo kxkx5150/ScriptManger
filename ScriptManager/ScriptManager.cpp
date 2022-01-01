@@ -7,7 +7,7 @@ NOTIFYICONDATA g_nid;
 HMENU hPopMenu;
 int main_window_width = 340;
 int main_window_height = 544;
-int add_group_height = 329;
+int add_group_height = 176;
 
 #define MAX_LOADSTRING 100
 HINSTANCE hInst;
@@ -283,6 +283,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         auto rgb = RGB(0, 0xbb, 0xFF);
         if (GetDlgItem(hWnd, IDC_ADDGROUP) == (HWND)lParam) {
             rgb = RGB(0xFF, 0xFF, 0);
+        } else if (GetDlgItem(hWnd, IDC_SEARCHGROUP) == (HWND)lParam) {
+            rgb = RGB(0, 0xCF, 0xBB);
         }
         hBrushColor = CreateSolidBrush(rgb);
         return (LRESULT)hBrushColor;

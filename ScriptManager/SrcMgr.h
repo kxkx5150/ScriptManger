@@ -1,8 +1,8 @@
 #pragma once
 #include <Windows.h>
-#include <vector>
 #include <string>
 #include <tchar.h>
+#include <vector>
 
 struct Command {
     TCHAR* name;
@@ -39,7 +39,6 @@ private:
     HFONT m_sshFont = nullptr;
     HFONT m_lsthFont = nullptr;
 
-
     HWND m_combogrouphwnd = nullptr;
 
     HWND m_run_btnhwnd = nullptr;
@@ -65,6 +64,10 @@ private:
     HWND m_src_filebtn = nullptr;
     HWND m_working_dirbtn = nullptr;
 
+    HWND m_search_grouphwnd = nullptr;
+
+    
+
     std::vector<Command> m_commands;
     int m_activeidx = -1;
 
@@ -87,7 +90,7 @@ public:
 
     void open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt);
     void open_directory_dialog(HWND hwnd, HWND dirhwnd);
-    void click_add_script(int index=-1);
+    void click_add_script(int index = -1);
     void drop_files_into_listbox(HDROP hdrop);
 
     void click_add_arg();
@@ -104,7 +107,6 @@ public:
     int write_file(TCHAR* filename, TCHAR* args);
     void exe_directory(TCHAR* path);
 
-
 private:
     void set_font();
     void create_control();
@@ -117,7 +119,7 @@ private:
     HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     void create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight);
 
-    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
+    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath,
         TCHAR* pydir, TCHAR* args, TCHAR* cmd, int windowopt, int index);
 
     void select_combobox_item(int index);

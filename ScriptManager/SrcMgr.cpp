@@ -314,15 +314,12 @@ void SrcMgr::create_control()
     m_sshFont = create_font(10);
     m_lsthFont = create_font(12);
 
-
     m_combogrouphwnd = create_group(m_prnthwnd, 2, 1, 320, 44, (TCHAR*)L"");
     m_combohwnd = create_combobox(m_combogrouphwnd, 2, 14, 180, 200, IDC_COMBO);
     m_run_btnhwnd = create_button(m_combogrouphwnd, 185, 13, 76, 26, ID_EXE, (TCHAR*)L"Run");
     m_delete_btnhwnd = create_button(m_combogrouphwnd, 263, 13, 54, 26, ID_COMB_DELETE, (TCHAR*)L"Delete");
 
-
-
-    m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L"Drop argument files");
+    m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L" Drop argument files ");
     m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 96);
     m_addarghwnd = create_button(m_dropgrouphwnd, 300, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
     m_delarghwnd = create_button(m_dropgrouphwnd, 300, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
@@ -333,7 +330,7 @@ void SrcMgr::create_control()
     SetWindowSubclass(m_dd_listhwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_dd_listhwnd, GWLP_USERDATA, (LONG)this);
 
-    m_addgrouphwnd = create_group(m_prnthwnd, 2, 162, 320, 320, (TCHAR*)L"Add script", IDC_ADDGROUP);
+    m_addgrouphwnd = create_group(m_prnthwnd, 2, 162, 320, 320, (TCHAR*)L" Add script ", IDC_ADDGROUP);
     m_name_edithwnd = create_edittext(m_addgrouphwnd, 4, 18, 160, 18, IDC_NAMETEXT, (TCHAR*)L"");
     m_cmd_edithwnd = create_edittext(m_addgrouphwnd, 4, 46, 160, 18, IDC_EXE_EDIT, (TCHAR*)L"python.exe");
 
@@ -355,6 +352,12 @@ void SrcMgr::create_control()
     m_add_btnhwnd = create_button(m_addgrouphwnd, 16, 270, 90, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
     m_update_btnhwnd = create_button(m_addgrouphwnd, 115, 270, 90, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
     m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
+
+
+
+    m_search_grouphwnd = create_group(m_prnthwnd, 2, 116, 320, 190, (TCHAR*)L" Search ", IDC_SEARCHGROUP);
+    ShowWindow(m_search_grouphwnd, SW_HIDE);
+
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
     Edit_SetCueBannerText(m_cmd_edithwnd, L"*.exe");
@@ -397,6 +400,8 @@ void SrcMgr::set_font()
     SendMessage(m_src_filebtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_working_dirbtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_stor_arg_chkboxhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
+
+    SendMessage(m_search_grouphwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
 
     SendMessage(m_addarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_delarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
@@ -482,11 +487,23 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
     int cy = rc.bottom - rc.top;
 
     if (addmenu) {
+        ShowWindow(m_combogrouphwnd, SW_SHOWNORMAL);
         ShowWindow(m_addgrouphwnd, SW_SHOWNORMAL);
+        ShowWindow(m_search_grouphwnd, SW_HIDE);
+
+        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 48, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy + addarea, SWP_NOMOVE);
+
+
     } else {
+        ShowWindow(m_combogrouphwnd, SW_HIDE);
         ShowWindow(m_addgrouphwnd, SW_HIDE);
+
+        ShowWindow(m_search_grouphwnd, SW_SHOWNORMAL);
+        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 2, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
+
+
     }
 }
 void SrcMgr::click_add_script(int index)

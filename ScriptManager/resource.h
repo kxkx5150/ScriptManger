@@ -35,6 +35,8 @@
 #define ID_CLEAR_BUTTON                 170
 #define IDD_ABOUTBOX                    173
 #define IDC_ADDGROUP                    175
+#define IDC_SEARCHGROUP					176
+
 #define IDB_BITMAP1                     183
 #define IDD_DIALOGBAR                   186
 #define IDS_LISTBOX                     198
