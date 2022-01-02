@@ -104,8 +104,8 @@ public:
 
     void write_setting_csv();
     void read_setting_csv();
-    int write_file(TCHAR* filename, TCHAR* args);
-    void exe_directory(TCHAR* path);
+    int write_file(TCHAR* filename, TCHAR* args, bool utf8=false);
+    void exe_directory_path(TCHAR* path);
 
 private:
     void set_font();

@@ -208,7 +208,7 @@ void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::
     }
     wcscpy_s(strbuf, maxlen, sstr.c_str());
 }
-void SrcMgr::exe_directory(TCHAR* path)
+void SrcMgr::exe_directory_path(TCHAR* path)
 {
     GetModuleFileName(NULL, path, MAX_PATH);
     TCHAR* ptmp = _tcsrchr(path, _T('\\'));
@@ -217,46 +217,47 @@ void SrcMgr::exe_directory(TCHAR* path)
         *ptmp = '\0';
     }
 }
-int SrcMgr::write_file(TCHAR* filename, TCHAR* args)
+int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
 {
     TCHAR m_Path[MAX_PATH] = { '\0' };
-    exe_directory(m_Path);
+    exe_directory_path(m_Path);
     wcscat_s(m_Path, MAX_PATH, filename);
     wcscpy_s(filename, MAX_PATH, m_Path);
 
     size_t uuu = 10000;
     size_t* u8len = &uuu;
-    TCHAR* u8str = new TCHAR[10000];
-    UTF8* bufstr = new UTF8[10000];
-    utf16_to_utf8(args, _tcslen(args), bufstr, u8len);
+    UTF8* bufstr = new UTF8[*u8len];
+
+    if (utf8) {
+        utf16_to_utf8(args, _tcslen(args), bufstr, u8len);
+        bufstr[(int)*u8len] = '\0';
+    }
 
     HANDLE hFile = CreateFile(m_Path,
-        GENERIC_WRITE,
-        0,
-        NULL,
+        GENERIC_WRITE,0,NULL,
         CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
+        FILE_ATTRIBUTE_NORMAL,NULL);
 
     if (hFile == INVALID_HANDLE_VALUE)
         return 0;
     CloseHandle(hFile);
     hFile = CreateFile(m_Path,
-        GENERIC_WRITE,
-        0,
-        NULL,
+        GENERIC_WRITE, 0, NULL,
         TRUNCATE_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
+        FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return 0;
-    DWORD written;
-    WriteFile(hFile, bufstr, *u8len * sizeof(UTF8), &written, NULL);
-    CloseHandle(hFile);
 
-    delete[] u8str;
+    DWORD written;
+    if (utf8) {
+        WriteFile(hFile, bufstr, *u8len * sizeof(UTF8), &written, NULL);
+    } else {
+        WriteFile(hFile, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
+    }
+
+    CloseHandle(hFile);
     delete[] bufstr;
-    return 0;
+    return written;
 }
 void SrcMgr::exe_script(int exeidx)
 {
@@ -269,6 +270,8 @@ void SrcMgr::exe_script(int exeidx)
 
     TCHAR* args = new TCHAR[8191];
     args[0] = '\0';
+    wcscat_s(args, 8191, L"chcp 65001\r\n");
+
     if (_tcslen(command.batpath) > 0) {
         wcscat_s(args, 8191, L"call");
         wcscat_s(args, 8191, L" \"");
@@ -292,9 +295,9 @@ void SrcMgr::exe_script(int exeidx)
         wcscat_s(args, 8191, L"\"");
     }
 
-    TCHAR bat[MAX_PATH] = L"/k \"";
+    TCHAR bat[MAX_PATH] = L"/C \"";
     TCHAR batpath[MAX_PATH] = L"exe.bat";
-    write_file(batpath, args);
+    write_file(batpath, args, true);
     wcscat_s(bat, MAX_PATH, batpath);
     wcscat_s(bat, MAX_PATH, L"\"");
 
@@ -318,6 +321,7 @@ void SrcMgr::create_control()
     m_combohwnd = create_combobox(m_combogrouphwnd, 2, 14, 180, 200, IDC_COMBO);
     m_run_btnhwnd = create_button(m_combogrouphwnd, 185, 13, 76, 26, ID_EXE, (TCHAR*)L"Run");
     m_delete_btnhwnd = create_button(m_combogrouphwnd, 263, 13, 54, 26, ID_COMB_DELETE, (TCHAR*)L"Delete");
+    SetWindowSubclass(m_combogrouphwnd, &SubclassWindowProc, 0, 0);
 
     m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L" Drop argument files ");
     m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 96);
@@ -353,11 +357,8 @@ void SrcMgr::create_control()
     m_update_btnhwnd = create_button(m_addgrouphwnd, 115, 270, 90, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
     m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
 
-
-
     m_search_grouphwnd = create_group(m_prnthwnd, 2, 116, 320, 190, (TCHAR*)L" Search ", IDC_SEARCHGROUP);
     ShowWindow(m_search_grouphwnd, SW_HIDE);
-
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
     Edit_SetCueBannerText(m_cmd_edithwnd, L"*.exe");
@@ -494,7 +495,6 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
         SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 48, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy + addarea, SWP_NOMOVE);
 
-
     } else {
         ShowWindow(m_combogrouphwnd, SW_HIDE);
         ShowWindow(m_addgrouphwnd, SW_HIDE);
@@ -502,8 +502,6 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
         ShowWindow(m_search_grouphwnd, SW_SHOWNORMAL);
         SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 2, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
-
-
     }
 }
 void SrcMgr::click_add_script(int index)
@@ -890,6 +888,20 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
             g_srcmgr->change_venv_checkbox();
         } break;
 
+        case IDC_COMBO:
+            if (HIWORD(wParam) == CBN_SELCHANGE) {
+                g_srcmgr->change_select_combobox();
+            }
+            break;
+
+        case ID_EXE:
+            g_srcmgr->exe_script();
+            break;
+
+        case ID_COMB_DELETE:
+            g_srcmgr->delete_script();
+            break;
+
         case IDC_NAMETEXT:
         case IDC_VENVPATH:
         case IDC_SRCPATH:
@@ -929,10 +941,6 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
         case IDC_DOWN_ARG_BUTTON: {
             g_srcmgr->click_down_arg();
-        } break;
-
-        case ID_COMB_DELETE: {
-            g_srcmgr->delete_script();
         } break;
         }
     } break;

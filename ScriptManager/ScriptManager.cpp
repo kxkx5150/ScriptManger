@@ -219,11 +219,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             DestroyWindow(hWnd);
             break;
 
-        case IDC_COMBO:
-            if (HIWORD(wParam) == CBN_SELCHANGE) {
-                g_script_manager->change_select_combobox();
-            }
-            break;
+
 
         case ID_SCRIPT_ADD:
             toggle_check_menu(hWnd, ID_SCRIPT_ADD);
@@ -237,13 +233,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             setStartUp(hWnd);
         } break;
 
-        case ID_EXE:
-            g_script_manager->exe_script();
-            break;
 
-        case ID_COMB_DELETE:
-            g_script_manager->delete_script();
-            break;
 
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
