@@ -32,20 +32,6 @@ void SrcMgr::init()
         select_combobox_item(0);
     }
 }
-void SrcMgr::change_select_combobox()
-{
-    int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
-    if (exeidx == -1) {
-        reset_script_value();
-        EnableWindow(m_run_btnhwnd, false);
-        EnableWindow(m_delete_btnhwnd, false);
-    } else {
-        set_script_value(exeidx);
-        EnableWindow(m_run_btnhwnd, true);
-        EnableWindow(m_delete_btnhwnd, true);
-        EnableWindow(m_update_btnhwnd, true);
-    }
-}
 void SrcMgr::set_script_value(int exeidx)
 {
     Command cmd = m_commands[exeidx];
@@ -114,6 +100,20 @@ void SrcMgr::reset_script_value()
     SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
     SendMessage(m_combohwnd, CB_SETCURSEL, -1, 0);
 }
+void SrcMgr::change_select_combobox()
+{
+    int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+    if (exeidx == -1) {
+        reset_script_value();
+        EnableWindow(m_run_btnhwnd, false);
+        EnableWindow(m_delete_btnhwnd, false);
+    } else {
+        set_script_value(exeidx);
+        EnableWindow(m_run_btnhwnd, true);
+        EnableWindow(m_delete_btnhwnd, true);
+        EnableWindow(m_update_btnhwnd, true);
+    }
+}
 void SrcMgr::change_venv_checkbox()
 {
     if (BST_CHECKED == SendMessage(m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
@@ -148,19 +148,6 @@ void SrcMgr::change_script_path()
     //} else {
     //    EnableWindow(m_add_btnhwnd, false);
     //}
-}
-void SrcMgr::delete_script(int exeidx)
-{
-    auto comcount = m_commands.size();
-    if (comcount == 0)
-        return;
-    if (exeidx == -1)
-        exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
-    if (exeidx == -1)
-        return;
-    SendMessage(m_combohwnd, CB_DELETESTRING, exeidx, 0);
-    delete_command(exeidx);
-    reset_script_value();
 }
 void SrcMgr::delete_command(int exeidx)
 {
@@ -198,66 +185,18 @@ void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, 
         m_commands.insert(m_commands.begin() + index, command);
     }
 }
-void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword)
+void SrcMgr::delete_script(int exeidx)
 {
-    std::wstring sstr = std::wstring(strbuf);
-    std::wstring::size_type Pos(sstr.find(sword));
-    while (Pos != std::string::npos) {
-        sstr.replace(Pos, sword.length(), rword);
-        Pos = sstr.find(sword, Pos + rword.length());
-    }
-    wcscpy_s(strbuf, maxlen, sstr.c_str());
-}
-void SrcMgr::exe_directory_path(TCHAR* path)
-{
-    GetModuleFileName(NULL, path, MAX_PATH);
-    TCHAR* ptmp = _tcsrchr(path, _T('\\'));
-    if (ptmp != NULL) {
-        ptmp = _tcsinc(ptmp);
-        *ptmp = '\0';
-    }
-}
-int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
-{
-    TCHAR m_Path[MAX_PATH] = { '\0' };
-    exe_directory_path(m_Path);
-    wcscat_s(m_Path, MAX_PATH, filename);
-    wcscpy_s(filename, MAX_PATH, m_Path);
-
-    size_t uuu = 10000;
-    size_t* u8len = &uuu;
-    UTF8* bufstr = new UTF8[*u8len];
-
-    if (utf8) {
-        utf16_to_utf8(args, _tcslen(args), bufstr, u8len);
-        bufstr[(int)*u8len] = '\0';
-    }
-
-    HANDLE hFile = CreateFile(m_Path,
-        GENERIC_WRITE,0,NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE)
-        return 0;
-    CloseHandle(hFile);
-    hFile = CreateFile(m_Path,
-        GENERIC_WRITE, 0, NULL,
-        TRUNCATE_EXISTING,
-        FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-        return 0;
-
-    DWORD written;
-    if (utf8) {
-        WriteFile(hFile, bufstr, *u8len * sizeof(UTF8), &written, NULL);
-    } else {
-        WriteFile(hFile, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
-    }
-
-    CloseHandle(hFile);
-    delete[] bufstr;
-    return written;
+    auto comcount = m_commands.size();
+    if (comcount == 0)
+        return;
+    if (exeidx == -1)
+        exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+    if (exeidx == -1)
+        return;
+    SendMessage(m_combohwnd, CB_DELETESTRING, exeidx, 0);
+    delete_command(exeidx);
+    reset_script_value();
 }
 void SrcMgr::exe_script(int exeidx)
 {
@@ -480,30 +419,7 @@ int SrcMgr::get_combobox_index(TCHAR* itemstr)
     WPARAM index = SendMessage(m_combohwnd, CB_FINDSTRINGEXACT, -1, (LPARAM)itemstr);
     return index;
 }
-void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
-{
-    RECT rc;
-    GetWindowRect(hWnd, &rc);
-    int cx = rc.right - rc.left;
-    int cy = rc.bottom - rc.top;
 
-    if (addmenu) {
-        ShowWindow(m_combogrouphwnd, SW_SHOWNORMAL);
-        ShowWindow(m_addgrouphwnd, SW_SHOWNORMAL);
-        ShowWindow(m_search_grouphwnd, SW_HIDE);
-
-        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 48, 0, 0, SWP_NOSIZE);
-        SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy + addarea, SWP_NOMOVE);
-
-    } else {
-        ShowWindow(m_combogrouphwnd, SW_HIDE);
-        ShowWindow(m_addgrouphwnd, SW_HIDE);
-
-        ShowWindow(m_search_grouphwnd, SW_SHOWNORMAL);
-        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 2, 0, 0, SWP_NOSIZE);
-        SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
-    }
-}
 void SrcMgr::click_add_script(int index)
 {
     TCHAR namebuf[MAX_PATH] = { '\0' };
@@ -586,39 +502,6 @@ void SrcMgr::click_add_script(int index)
         wopt,
         index);
 }
-void SrcMgr::trim_tchar(TCHAR* pText)
-{
-    TCHAR wsBuf[MAX_PATH];
-    wcscpy_s(wsBuf, MAX_PATH, pText);
-    TCHAR* p = wsBuf;
-    TCHAR *pTop = NULL, *pEnd = NULL;
-    while ((*p != L'\0') && (*p != L'\r') && (*p != L'\n')) {
-        if ((*p != L'\t') && (*p != L' ') && (*p != L'Å@')) {
-            // êÊì™Çï€ë∂
-            if (!pTop) {
-                pTop = p;
-            }
-            pEnd = NULL;
-        } else {
-            if (!pEnd) {
-                pEnd = p;
-            }
-        }
-        p++;
-    }
-
-    if (!pEnd) {
-        pEnd = p;
-    }
-
-    if (pTop && pEnd) {
-        long long nLength = (pEnd - pTop);
-        wmemcpy(pText, pTop, nLength << 1);
-        pText[nLength] = L'\0';
-    } else {
-        pText[0] = L'\0';
-    }
-}
 void SrcMgr::add_arg_txt(HWND hDlg)
 {
     HWND ehwnd = GetDlgItem(hDlg, IDC_ARG_EDIT);
@@ -675,66 +558,52 @@ void SrcMgr::click_down_arg()
     SendMessage(m_dd_listhwnd, LB_INSERTSTRING, exeidx, (LPARAM)tmptxt);
     SendMessage(m_dd_listhwnd, LB_SETCURSEL, exeidx + 1, 0);
 }
-void SrcMgr::drop_files_into_listbox(HDROP hdrop)
-{
-    TCHAR _filepath[MAX_PATH];
-    TCHAR filepath[MAX_PATH];
-    _filepath[0] = '\0';
-    filepath[0] = '\0';
-
-    int num = DragQueryFile(hdrop, -1, NULL, 0);
-    for (int i = 0; i < num; i++) {
-        DragQueryFile(hdrop, i, _filepath, sizeof(_filepath) / sizeof(TCHAR));
-        wcscat_s(filepath, MAX_PATH, _filepath);
-        SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)filepath);
-        _filepath[0] = '\0';
-        filepath[0] = '\0';
-    }
-    DragFinish(hdrop);
-}
 void SrcMgr::write_setting_csv()
 {
-    std::wofstream outputfile(L"test.csv");
+    std::wstring argstr = L"";
     for (auto&& cmd : m_commands) {
         replace_string(cmd.args, 8191, L"\n", L"\t");
-        outputfile << cmd.name;
-        outputfile << ',';
-        outputfile << cmd.exe;
-        outputfile << ',';
-        outputfile << cmd.batpath;
-        outputfile << ',';
-        outputfile << cmd.pypath;
-        outputfile << ',';
-        outputfile << cmd.pydir;
-        outputfile << ',';
-        outputfile << cmd.args;
-        outputfile << ',';
-        outputfile << cmd.cmd;
-        outputfile << ',';
-        outputfile << cmd.windowopt;
-        outputfile << '\n';
+        argstr += cmd.name;
+        argstr += L",";
+        argstr += cmd.exe;
+        argstr += L",";
+        argstr += cmd.batpath;
+        argstr += L",";
+        argstr += cmd.pypath;
+        argstr += L",";
+        argstr += cmd.pydir;
+        argstr += L",";
+        argstr += cmd.args;
+        argstr += L",";
+        argstr += cmd.cmd;
+        argstr += L",";
+        argstr += std::to_wstring(cmd.windowopt);
+        argstr += L"\n";
     }
-    outputfile.close();
-}
-std::vector<std::wstring> split(std::wstring& input, TCHAR delimiter)
-{
-    std::wistringstream stream(input);
-    std::wstring field;
-    std::vector<std::wstring> result;
-    while (getline(stream, field, delimiter)) {
-        result.push_back(field);
-    }
-    return result;
+
+    int strlen = argstr.length() + 10;
+    TCHAR* filename = new TCHAR[MAX_PATH];
+    TCHAR* buftmp = new TCHAR[strlen];
+    wcscpy_s(filename, MAX_PATH, L"settings.csv");
+    wcscpy_s(buftmp, strlen, argstr.c_str());
+    write_file(filename, buftmp);
 }
 void SrcMgr::read_setting_csv()
 {
-    int windowopt;
-    std::wifstream ifs("test.csv");
-    std::wstring line;
-    while (getline(ifs, line)) {
-        std::vector<std::wstring> strvec = split(line, ',');
-        int idx = 0;
+    TCHAR* stradd = read_file(L"settings.csv");
+    if (!stradd)
+        return;
+    std::wstring txt = stradd;
+    std::vector<std::wstring> str = split(txt, '\n');
+    size_t len = str.size();
 
+    for (size_t i = 0; i < len; i++) {
+        std::vector<std::wstring> strvec = split(str.at(i), ',');
+        int csvlen = strvec.size();
+        if (csvlen < 8)
+            continue;
+        
+        int idx = 0;
         TCHAR* name = new TCHAR[MAX_PATH];
         wcscpy_s(name, MAX_PATH, strvec.at(idx).c_str());
         TCHAR* exe = new TCHAR[MAX_PATH];
@@ -745,11 +614,9 @@ void SrcMgr::read_setting_csv()
         wcscpy_s(pypath, MAX_PATH, strvec.at(idx + 3).c_str());
         TCHAR* pydir = new TCHAR[MAX_PATH];
         wcscpy_s(pydir, MAX_PATH, strvec.at(idx + 4).c_str());
-
         TCHAR* args = new TCHAR[8191];
         wcscpy_s(args, MAX_PATH, strvec.at(idx + 5).c_str());
         replace_string(args, 8191, L"\t", L"\n");
-
         TCHAR* cmd = new TCHAR[MAX_PATH];
         wcscpy_s(cmd, MAX_PATH, strvec.at(idx + 6).c_str());
         int windowopt = std::stoi(strvec.at(idx + 7));
@@ -764,6 +631,75 @@ void SrcMgr::read_setting_csv()
             cmd,
             windowopt,
             -1);
+
+    }
+}
+int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
+{
+    TCHAR m_Path[MAX_PATH] = { '\0' };
+    exe_directory_path(m_Path);
+    wcscat_s(m_Path, MAX_PATH, filename);
+    wcscpy_s(filename, MAX_PATH, m_Path);
+
+    size_t uuu = 10000;
+    size_t* u8len = &uuu;
+    UTF8* bufstr = new UTF8[*u8len];
+
+    if (utf8) {
+        utf16_to_utf8(args, _tcslen(args), bufstr, u8len);
+        bufstr[(int)*u8len] = '\0';
+    }
+
+    HANDLE hFile = CreateFile(m_Path,
+        GENERIC_WRITE, 0, NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return 0;
+    CloseHandle(hFile);
+    hFile = CreateFile(m_Path,
+        GENERIC_WRITE, 0, NULL,
+        TRUNCATE_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return 0;
+
+    DWORD written;
+    if (utf8) {
+        WriteFile(hFile, bufstr, *u8len * sizeof(UTF8), &written, NULL);
+    } else {
+        WriteFile(hFile, args, _tcslen(args) * sizeof(TCHAR), &written, NULL);
+    }
+
+    CloseHandle(hFile);
+    delete[] bufstr;
+    return written;
+}
+TCHAR* SrcMgr::read_file(const TCHAR* filename)
+{
+    TCHAR m_Path[MAX_PATH] = { '\0' };
+    exe_directory_path(m_Path);
+    wcscat_s(m_Path, MAX_PATH, filename);
+
+    HANDLE hFile = CreateFile(m_Path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return 0;
+    DWORD dfsize = ::GetFileSize(hFile, NULL);
+    TCHAR* argstmp = new TCHAR[dfsize + 10];
+    DWORD wReadSize;
+    BOOL ret = ReadFile(hFile, argstmp, dfsize, &wReadSize, NULL);
+    CloseHandle(hFile);
+    if (ret)
+        return argstmp;
+    else {
+        return nullptr;
     }
 }
 void SrcMgr::open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt)
@@ -828,6 +764,109 @@ void SrcMgr::open_directory_dialog(HWND hwnd, HWND dirhwnd)
         if (FALSE == bRet)
             return;
         SetWindowText(dirhwnd, szPathName);
+    }
+}
+void SrcMgr::drop_files_into_listbox(HDROP hdrop)
+{
+    TCHAR _filepath[MAX_PATH];
+    TCHAR filepath[MAX_PATH];
+    _filepath[0] = '\0';
+    filepath[0] = '\0';
+
+    int num = DragQueryFile(hdrop, -1, NULL, 0);
+    for (int i = 0; i < num; i++) {
+        DragQueryFile(hdrop, i, _filepath, sizeof(_filepath) / sizeof(TCHAR));
+        wcscat_s(filepath, MAX_PATH, _filepath);
+        SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)filepath);
+        _filepath[0] = '\0';
+        filepath[0] = '\0';
+    }
+    DragFinish(hdrop);
+}
+void SrcMgr::exe_directory_path(TCHAR* path)
+{
+    GetModuleFileName(NULL, path, MAX_PATH);
+    TCHAR* ptmp = _tcsrchr(path, _T('\\'));
+    if (ptmp != NULL) {
+        ptmp = _tcsinc(ptmp);
+        *ptmp = '\0';
+    }
+}
+std::vector<std::wstring> SrcMgr::split(std::wstring& input, TCHAR delimiter)
+{
+    std::wistringstream stream(input);
+    std::wstring field;
+    std::vector<std::wstring> result;
+    while (getline(stream, field, delimiter)) {
+        result.push_back(field);
+    }
+    return result;
+}
+void SrcMgr::trim_tchar(TCHAR* pText)
+{
+    TCHAR wsBuf[MAX_PATH];
+    wcscpy_s(wsBuf, MAX_PATH, pText);
+    TCHAR* p = wsBuf;
+    TCHAR *pTop = NULL, *pEnd = NULL;
+    while ((*p != L'\0') && (*p != L'\r') && (*p != L'\n')) {
+        if ((*p != L'\t') && (*p != L' ') && (*p != L'Å@')) {
+            // êÊì™Çï€ë∂
+            if (!pTop) {
+                pTop = p;
+            }
+            pEnd = NULL;
+        } else {
+            if (!pEnd) {
+                pEnd = p;
+            }
+        }
+        p++;
+    }
+
+    if (!pEnd) {
+        pEnd = p;
+    }
+
+    if (pTop && pEnd) {
+        long long nLength = (pEnd - pTop);
+        wmemcpy(pText, pTop, nLength << 1);
+        pText[nLength] = L'\0';
+    } else {
+        pText[0] = L'\0';
+    }
+}
+void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword)
+{
+    std::wstring sstr = std::wstring(strbuf);
+    std::wstring::size_type Pos(sstr.find(sword));
+    while (Pos != std::string::npos) {
+        sstr.replace(Pos, sword.length(), rword);
+        Pos = sstr.find(sword, Pos + rword.length());
+    }
+    wcscpy_s(strbuf, maxlen, sstr.c_str());
+}
+void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
+{
+    RECT rc;
+    GetWindowRect(hWnd, &rc);
+    int cx = rc.right - rc.left;
+    int cy = rc.bottom - rc.top;
+
+    if (addmenu) {
+        ShowWindow(m_combogrouphwnd, SW_SHOWNORMAL);
+        ShowWindow(m_addgrouphwnd, SW_SHOWNORMAL);
+        ShowWindow(m_search_grouphwnd, SW_HIDE);
+
+        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 48, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy + addarea, SWP_NOMOVE);
+
+    } else {
+        ShowWindow(m_combogrouphwnd, SW_HIDE);
+        ShowWindow(m_addgrouphwnd, SW_HIDE);
+
+        ShowWindow(m_search_grouphwnd, SW_SHOWNORMAL);
+        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 2, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
     }
 }
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -946,7 +985,7 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     } break;
 
     case WM_NCDESTROY:
-        //g_srcmgr->write_setting_csv();
+        g_srcmgr->write_setting_csv();
         RemoveWindowSubclass(hWnd, SubclassWindowProc, uIdSubclass);
         break;
     }

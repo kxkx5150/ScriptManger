@@ -66,8 +66,6 @@ private:
 
     HWND m_search_grouphwnd = nullptr;
 
-    
-
     std::vector<Command> m_commands;
     int m_activeidx = -1;
 
@@ -101,10 +99,12 @@ public:
     void add_arg_txt(HWND hDlg);
     void trim_tchar(TCHAR* pText);
     void replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword);
+    std::vector<std::wstring> split(std::wstring& input, TCHAR delimiter);
 
     void write_setting_csv();
     void read_setting_csv();
-    int write_file(TCHAR* filename, TCHAR* args, bool utf8=false);
+    int write_file(TCHAR* filename, TCHAR* args, bool utf8 = false);
+    TCHAR* read_file(const TCHAR* filename);
     void exe_directory_path(TCHAR* path);
 
 private:
