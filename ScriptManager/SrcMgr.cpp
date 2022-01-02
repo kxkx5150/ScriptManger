@@ -51,11 +51,17 @@ void SrcMgr::set_script_value(int exeidx)
     SetWindowText(m_dir_pathhwnd, cmd.pydir);
 
     if (cmd.windowopt == SW_SHOWNORMAL) {
+        SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
         SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
         SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    } else {
+    } else if (cmd.windowopt == SW_HIDE) {
+        SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
         SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
         SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessage(m_autoclose, BM_SETCHECK, BST_CHECKED, 0);
+        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
     }
 
     if (0 < _tcslen(cmd.args)) {
@@ -94,8 +100,11 @@ void SrcMgr::reset_script_value()
     SetWindowText(m_src_pathhwnd, L"");
     change_script_path();
     SetWindowText(m_dir_pathhwnd, L"");
+
+    SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
     SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
     SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+
     SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
     SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
     SendMessage(m_combohwnd, CB_SETCURSEL, -1, 0);
@@ -207,6 +216,7 @@ void SrcMgr::exe_script(int exeidx)
         exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
     Command command = m_commands[exeidx];
 
+    int windowopt = m_commands[exeidx].windowopt;
     TCHAR* args = new TCHAR[8191];
     args[0] = '\0';
     wcscat_s(args, 8191, L"chcp 65001\r\n");
@@ -234,7 +244,18 @@ void SrcMgr::exe_script(int exeidx)
         wcscat_s(args, 8191, L"\"");
     }
 
-    TCHAR bat[MAX_PATH] = L"/C \"";
+    TCHAR bat[MAX_PATH] = L"";
+    if (windowopt == SW_SHOWNORMAL) {
+        wcscat_s(bat, MAX_PATH, L"/K \"");
+
+    } else if (windowopt == SW_HIDE) {
+        wcscat_s(bat, MAX_PATH, L"/C \"");
+
+    } else {
+        wcscat_s(bat, MAX_PATH, L"/C \"");
+        windowopt = SW_SHOWNORMAL;
+    }
+
     TCHAR batpath[MAX_PATH] = L"exe.bat";
     write_file(batpath, args, true);
     wcscat_s(bat, MAX_PATH, batpath);
@@ -246,7 +267,7 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(pdir, MAX_PATH, command.pydir);
     wcscat_s(pdir, MAX_PATH, L"\"");
 
-    ShellExecute(NULL, L"open", command.cmd, bat, pdir, m_commands[exeidx].windowopt);
+    ShellExecute(NULL, L"open", command.cmd, bat, pdir, windowopt);
     delete[] args;
 }
 void SrcMgr::create_control()
@@ -289,9 +310,9 @@ void SrcMgr::create_control()
     SetWindowSubclass(m_addgrouphwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_addgrouphwnd, GWLP_USERDATA, (LONG)this);
 
-    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 44, 196, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
+    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 48, 193, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store arguments");
 
-    create_cmd_radiobutton(m_addgrouphwnd, 42, 226, 120, 25);
+    create_cmd_radiobutton(m_addgrouphwnd, 64, 226, 80, 25);
     m_add_btnhwnd = create_button(m_addgrouphwnd, 16, 270, 90, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
     m_update_btnhwnd = create_button(m_addgrouphwnd, 115, 270, 90, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
     m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
@@ -334,8 +355,12 @@ void SrcMgr::set_font()
     SendMessage(m_venv_pathhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_src_pathhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_dir_pathhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
+
+    SendMessage(m_cmd_txt, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_autoclose, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_showcmdhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_hidecmdhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
+
     SendMessage(m_venv_dirbtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_src_filebtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_working_dirbtn, WM_SETFONT, (WPARAM)m_sshFont, MAKELPARAM(FALSE, 0));
@@ -396,18 +421,29 @@ HWND SrcMgr::create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeig
 }
 void SrcMgr::create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight)
 {
-    m_showcmdhwnd = CreateWindow(
-        L"BUTTON", L"Show prompt",
+    m_cmd_txt = CreateWindow(
+        TEXT("STATIC"), L"CMD ",
+        WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE | SS_CENTER,
+        10, nY, 55, nHeight,
+        hParent, NULL, m_hInst, NULL);
+
+    m_autoclose = CreateWindow(
+        L"BUTTON", L"Auto Close",
         WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_GROUP,
-        nX, nY, nWidth, nHeight,
+        nX, nY, nWidth + 28, nHeight,
+        hParent, (HMENU)IDC_AUTOCLOSECMD, m_hInst, NULL);
+
+    m_showcmdhwnd = CreateWindow(
+        L"BUTTON", L"Show",
+        WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
+        nX + 108, nY, nWidth - 8, nHeight,
         hParent, (HMENU)IDC_SHOWCMD, m_hInst, NULL);
 
     m_hidecmdhwnd = CreateWindow(
-        L"BUTTON", L"Hide prompt",
+        L"BUTTON", L"Hide",
         WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-        nX + 120, nY, nWidth, nHeight,
+        nX + 180, nY, nWidth - 14, nHeight,
         hParent, (HMENU)IDC_HIDECMD, m_hInst, NULL);
-    SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
 }
 void SrcMgr::select_combobox_item(int index)
 {
@@ -483,8 +519,10 @@ void SrcMgr::click_add_script(int index)
     }
 
     int wopt = SW_SHOWNORMAL;
-    if (SendMessage(m_showcmdhwnd, BM_GETCHECK, 0, 0) != BST_CHECKED) {
+    if (SendMessage(m_hidecmdhwnd, BM_GETCHECK, 0, 0) == BST_CHECKED) {
         wopt = SW_HIDE;
+    } else if (SendMessage(m_autoclose, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+        wopt = SW_AUTOCLOSE;
     }
 
     TCHAR* cmd = new TCHAR[MAX_PATH];
@@ -602,7 +640,7 @@ void SrcMgr::read_setting_csv()
         int csvlen = strvec.size();
         if (csvlen < 8)
             continue;
-        
+
         int idx = 0;
         TCHAR* name = new TCHAR[MAX_PATH];
         wcscpy_s(name, MAX_PATH, strvec.at(idx).c_str());
@@ -631,7 +669,6 @@ void SrcMgr::read_setting_csv()
             cmd,
             windowopt,
             -1);
-
     }
 }
 int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)

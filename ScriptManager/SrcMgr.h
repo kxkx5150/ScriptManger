@@ -47,8 +47,12 @@ private:
     HWND m_dd_listhwnd = nullptr;
 
     HWND m_name_edithwnd = nullptr;
+
+    HWND m_cmd_txt = nullptr;
+    HWND m_autoclose = nullptr;
     HWND m_showcmdhwnd = nullptr;
     HWND m_hidecmdhwnd = nullptr;
+
     HWND m_addgrouphwnd = nullptr;
     HWND m_dropgrouphwnd = nullptr;
 

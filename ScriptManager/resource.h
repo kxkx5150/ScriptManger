@@ -18,8 +18,12 @@
 #define IDC_VENVPATH                    133
 #define IDC_SRCPATH                     134
 #define IDC_WDIRPATH                    135
+
 #define IDC_SHOWCMD                     136
 #define IDC_HIDECMD                     137
+#define IDC_AUTOCLOSECMD				139
+
+
 #define IDC_VENV_BUTTON                 150
 #define IDC_SRC_BUTTON                  151
 #define IDC_DIR_BUTTON                  152
@@ -36,6 +40,9 @@
 #define IDD_ABOUTBOX                    173
 #define IDC_ADDGROUP                    175
 #define IDC_SEARCHGROUP					176
+#define SW_AUTOCLOSE					177
+
+
 
 #define IDB_BITMAP1                     183
 #define IDD_DIALOGBAR                   186
