@@ -7,13 +7,13 @@ bool g_systray = true;
 bool g_startup = false;
 bool g_osmenu = true;
 
-
 NOTIFYICONDATA g_nid;
 HMENU hPopMenu;
 int main_window_width = 340;
 int main_window_height = 544;
 int add_group_height = 176;
 
+UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
 #define MAX_LOADSTRING 100
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
@@ -132,12 +132,11 @@ void toggle_sys_tray(HWND hWnd, int menuid)
 }
 void send_args(HWND mainhwnd)
 {
-    const UINT kCommandLineArgsMessageId = RegisterWindowMessage(L"SingletonApplication");
     std::wstring s = ::GetCommandLine();
     TCHAR* buffer = new TCHAR[s.length() + 1];
     wcscpy_s(buffer, s.length() + 1, s.c_str());
     COPYDATASTRUCT data_to_send = { 0 };
-    data_to_send.dwData = kCommandLineArgsMessageId;
+    data_to_send.dwData = uMessage;
     data_to_send.cbData = (DWORD)8191;
     data_to_send.lpData = buffer;
     SendMessage(mainhwnd, WM_COPYDATA, 0, (LPARAM)&data_to_send);
@@ -225,23 +224,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 void HandleCopyDataEvent(HWND main_window_handle, LPARAM lparam)
 {
-    //Copy the information sent via lparam param into a structure
+    UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
     COPYDATASTRUCT* copy_data_structure = { 0 };
     copy_data_structure = (COPYDATASTRUCT*)lparam;
     LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
-    OutputDebugString(arguments);
-    OutputDebugString(L"\n");
 
-    //if (copy_data_structure->dwData == kCommandLineArgsMessageId) {
-    //    //Extract the information from the created structure and forward the information to UI
-    //    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
-
-    //    //Set the focus on the main instance
-    //    SetForegroundWindow(main_window_handle);
-    //    ShowWindow(main_window_handle, SW_NORMAL);
-
-    //    MessageBox(main_window_handle, arguments, NULL, MB_OK);
-    //}
+    if (copy_data_structure->dwData == uMessage) {
+        OutputDebugString(arguments);
+        OutputDebugString(L"\n");
+    }
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -266,8 +257,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             DestroyWindow(hWnd);
             break;
 
-
-
         case ID_SCRIPT_ADD:
             toggle_check_menu(hWnd, ID_SCRIPT_ADD);
             break;
@@ -280,13 +269,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             setStartUp(hWnd);
         } break;
 
-
-
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
     } break;
-
 
     case WM_COPYDATA: {
         HandleCopyDataEvent(hWnd, lParam);

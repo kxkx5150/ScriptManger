@@ -62,6 +62,7 @@
 #define ID_MENU_ABOUT                   32776
 #define ID_MENU_SYSTEMTRAY              32777
 #define ID_MENU_STARTUP                 32778
+
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
