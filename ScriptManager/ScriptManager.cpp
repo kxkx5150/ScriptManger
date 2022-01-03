@@ -2,7 +2,12 @@
 #include "SrcMgr.h"
 #include "framework.h"
 
-bool systray = true;
+bool g_addgrop = true;
+bool g_systray = true;
+bool g_startup = false;
+bool g_osmenu = true;
+
+
 NOTIFYICONDATA g_nid;
 HMENU hPopMenu;
 int main_window_width = 340;
@@ -48,6 +53,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     if (!hWnd) {
         return FALSE;
     }
+
+    //nCmdShow = SW_MINIMIZE;
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
     return TRUE;
@@ -114,8 +121,8 @@ void toggle_check_menu(HWND hWnd, int menuid)
 void toggle_sys_tray(HWND hWnd, int menuid)
 {
     HMENU hmenu = GetMenu(hWnd);
-    systray = !systray;
-    if (systray) {
+    g_systray = !g_systray;
+    if (g_systray) {
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
         Shell_NotifyIcon(NIM_ADD, &g_nid);
     } else {
@@ -128,17 +135,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_RUNPYTHON, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
 
+    HWND mainhwnd = FindWindow(szWindowClass, szTitle);
+    if (mainhwnd != NULL) {
+        SetForegroundWindow(mainhwnd);
+        ShowWindow(mainhwnd, SW_SHOWNORMAL);
+        return FALSE;
+    }
+
+    MyRegisterClass(hInstance);
     if (!InitInstance(hInstance, nCmdShow)) {
         return FALSE;
     }
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RUNPYTHON));
     MSG msg;
+
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
             TranslateMessage(&msg);
@@ -150,7 +164,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 }
 void create_trayicon(HWND hWnd)
 {
-    if (!systray)
+    if (!g_systray)
         return;
     g_nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
     g_nid.hWnd = hWnd;
@@ -164,7 +178,7 @@ void create_trayicon(HWND hWnd)
 }
 void show_main_window(HWND hWnd)
 {
-    if (!systray)
+    if (!g_systray)
         return;
     POINT p;
     GetCursorPos(&p);
@@ -248,7 +262,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_SIZE: {
         if (wParam == SIZE_MINIMIZED) {
-            if (!systray)
+            if (!g_systray)
                 return 0;
             ShowWindow(hWnd, SW_HIDE);
         }
@@ -284,6 +298,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_script_manager = new SrcMgr(hWnd, hInst);
         g_script_manager->init();
         g_script_manager->read_setting_csv();
+        g_script_manager->receive_args();
+
         createContextMenu();
         create_trayicon(hWnd);
 

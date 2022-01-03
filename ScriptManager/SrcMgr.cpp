@@ -71,11 +71,15 @@ void SrcMgr::set_script_value(int exeidx)
     }
 
     SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
-    if (0 < _tcslen(cmd.args)) {
+    set_ddlist_value(cmd.args, L"\n");
+
+}
+void SrcMgr::set_ddlist_value(const TCHAR* args, const TCHAR* delim)
+{
+    if (0 < _tcslen(args)) {
         TCHAR* buftmp = new TCHAR[8191];
         buftmp[0] = '\0';
-        TCHAR delim[] = L"\n";
-        std::wstring s = std::wstring(cmd.args);
+        std::wstring s = std::wstring(args);
         std::wstring item;
         for (TCHAR ch : s) {
             if (ch == delim[0]) {
@@ -207,6 +211,21 @@ void SrcMgr::delete_script(int exeidx)
     delete_command(exeidx);
     reset_script_value();
 }
+int SrcMgr::get_ddlist_value(TCHAR* listtxt)
+{
+    TCHAR* tmpbuf = new TCHAR[8191];
+    int items = SendMessage(m_dd_listhwnd, LB_GETCOUNT, 0, 0);
+    for (size_t i = 0; i < items; i++) {
+        SendMessage(m_dd_listhwnd, LB_GETTEXT, i, (LPARAM)tmpbuf);
+        wcscat_s(listtxt, 8191, tmpbuf);
+        if (i != items - 1) {
+            wcscat_s(listtxt, 8191, L"\n");
+        }
+        tmpbuf[0] = '\0';
+    }
+    delete[] tmpbuf;
+    return items;
+}
 void SrcMgr::exe_script(int exeidx)
 {
     auto comcount = m_commands.size();
@@ -235,12 +254,13 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(args, 8191, command.pypath);
     wcscat_s(args, 8191, L"\"");
 
-    if (0 < _tcslen(command.args)) {
+    TCHAR* listtxt = new TCHAR[8191];
+    listtxt[0] = '\0';
+    int listcnt = get_ddlist_value(listtxt);
+    if (0 < listcnt) {
         wcscat_s(args, 8191, L" \"");
-        TCHAR* buftmp = new TCHAR[8191];
-        wcscpy_s(buftmp, 8191, command.args);
-        replace_string(buftmp, 8191, L"\n", L"\" \"");
-        wcscat_s(args, 8191, buftmp);
+        replace_string(listtxt, 8191, L"\n", L"\" \"");
+        wcscat_s(args, 8191, listtxt);
         wcscat_s(args, 8191, L"\"");
     }
 
@@ -269,6 +289,8 @@ void SrcMgr::exe_script(int exeidx)
 
     ShellExecute(NULL, L"open", command.cmd, bat, pdir, windowopt);
     delete[] args;
+    delete[] listtxt;
+    delete[] pdir;
 }
 void SrcMgr::create_control()
 {
@@ -506,16 +528,7 @@ void SrcMgr::click_add_script(int index)
     TCHAR* argsbuf = new TCHAR[8191];
     argsbuf[0] = '\0';
     if (BST_CHECKED == SendMessage(m_stor_arg_chkboxhwnd, BM_GETCHECK, 0, 0)) {
-        TCHAR tmpbuf[MAX_PATH] = { '\0' };
-        int items = SendMessage(m_dd_listhwnd, LB_GETCOUNT, 0, 0);
-        for (size_t i = 0; i < items; i++) {
-            SendMessage(m_dd_listhwnd, LB_GETTEXT, i, (LPARAM)tmpbuf);
-            wcscat_s(argsbuf, 8191, tmpbuf);
-            tmpbuf[0] = '\0';
-            if (i != items - 1) {
-                wcscat_s(argsbuf, 8191, L"\n");
-            }
-        }
+        get_ddlist_value(argsbuf);
     }
 
     int wopt = SW_SHOWNORMAL;
@@ -905,6 +918,21 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
         SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 2, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
     }
+}
+void SrcMgr::receive_args()
+{
+    int argc;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (argc < 2)
+        return;
+    std::wstring argstr = L"";
+    for (int i = 1; i < argc; ++i) {
+        argstr += argv[i];
+        if(i != argc-1)
+            argstr += L"\n";
+    }
+
+    set_ddlist_value(argstr.c_str(), L"\n");
 }
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {

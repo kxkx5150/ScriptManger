@@ -78,16 +78,20 @@ public:
     ~SrcMgr();
 
     void init();
+    void receive_args();
     void resize_window(HWND hWnd, bool addmenu, int addarea);
 
     void change_venv_checkbox();
     void change_select_combobox();
+
+    int get_ddlist_value(TCHAR* listtxt);
     void exe_script(int exeidx = -1);
     void delete_script(int exeidx = -1);
     void delete_command(int exeidx);
 
     void change_script_path();
     void set_script_value(int exeidx);
+    void set_ddlist_value(const TCHAR* args, const TCHAR* delim);
     void reset_script_value();
 
     void open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt);
