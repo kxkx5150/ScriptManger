@@ -130,6 +130,18 @@ void toggle_sys_tray(HWND hWnd, int menuid)
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
     }
 }
+void send_args(HWND mainhwnd)
+{
+    const UINT kCommandLineArgsMessageId = RegisterWindowMessage(L"SingletonApplication");
+    std::wstring s = ::GetCommandLine();
+    TCHAR* buffer = new TCHAR[s.length() + 1];
+    wcscpy_s(buffer, s.length() + 1, s.c_str());
+    COPYDATASTRUCT data_to_send = { 0 };
+    data_to_send.dwData = kCommandLineArgsMessageId;
+    data_to_send.cbData = (DWORD)8191;
+    data_to_send.lpData = buffer;
+    SendMessage(mainhwnd, WM_COPYDATA, 0, (LPARAM)&data_to_send);
+}
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
@@ -142,6 +154,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     if (mainhwnd != NULL) {
         SetForegroundWindow(mainhwnd);
         ShowWindow(mainhwnd, SW_SHOWNORMAL);
+        send_args(mainhwnd);
         return FALSE;
     }
 
@@ -210,6 +223,26 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+void HandleCopyDataEvent(HWND main_window_handle, LPARAM lparam)
+{
+    //Copy the information sent via lparam param into a structure
+    COPYDATASTRUCT* copy_data_structure = { 0 };
+    copy_data_structure = (COPYDATASTRUCT*)lparam;
+    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
+    OutputDebugString(arguments);
+    OutputDebugString(L"\n");
+
+    //if (copy_data_structure->dwData == kCommandLineArgsMessageId) {
+    //    //Extract the information from the created structure and forward the information to UI
+    //    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
+
+    //    //Set the focus on the main instance
+    //    SetForegroundWindow(main_window_handle);
+    //    ShowWindow(main_window_handle, SW_NORMAL);
+
+    //    MessageBox(main_window_handle, arguments, NULL, MB_OK);
+    //}
+}
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -252,6 +285,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
+    } break;
+
+
+    case WM_COPYDATA: {
+        HandleCopyDataEvent(hWnd, lParam);
+
     } break;
 
     case WM_PAINT: {

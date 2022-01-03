@@ -11,9 +11,9 @@
 
 SrcMgr* g_srcmgr;
 SrcMgr::SrcMgr(HWND hWnd, HINSTANCE hInst)
+    : m_prnthwnd(hWnd)
+    , m_hInst(hInst)
 {
-    m_prnthwnd = hWnd;
-    m_hInst = hInst;
     g_srcmgr = this;
 }
 SrcMgr::~SrcMgr()
@@ -22,6 +22,11 @@ SrcMgr::~SrcMgr()
     DeleteObject(m_shFont);
     DeleteObject(m_sshFont);
     DeleteObject(m_lsthFont);
+
+    for (int i = 0; i < m_commands.size(); i++) {
+        delete_command(i);
+    }
+    m_commands.clear();
 }
 void SrcMgr::init()
 {
@@ -72,7 +77,6 @@ void SrcMgr::set_script_value(int exeidx)
 
     SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
     set_ddlist_value(cmd.args, L"\n");
-
 }
 void SrcMgr::set_ddlist_value(const TCHAR* args, const TCHAR* delim)
 {
@@ -143,10 +147,10 @@ void SrcMgr::change_script_path()
     GetWindowText(m_src_pathhwnd, srcpathbuf, MAX_PATH);
     trim_tchar(srcpathbuf);
     if (_tcslen(srcpathbuf) == 0) {
-        EnableWindow(m_add_btnhwnd, false);
+        //EnableWindow(m_add_btnhwnd, false);
         EnableWindow(m_update_btnhwnd, false);
     } else {
-        EnableWindow(m_add_btnhwnd, true);
+        //EnableWindow(m_add_btnhwnd, true);
         int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
         if (exeidx == -1) {
             EnableWindow(m_update_btnhwnd, false);
@@ -154,13 +158,6 @@ void SrcMgr::change_script_path()
             EnableWindow(m_update_btnhwnd, true);
         }
     }
-
-    //DWORD dwAttrib = GetFileAttributes(srcpathbuf);
-    //if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
-    //    EnableWindow(m_add_btnhwnd, true);
-    //} else {
-    //    EnableWindow(m_add_btnhwnd, false);
-    //}
 }
 void SrcMgr::delete_command(int exeidx)
 {
@@ -174,19 +171,8 @@ void SrcMgr::delete_command(int exeidx)
     delete[] cmd.cmd;
     m_commands.erase(m_commands.begin() + exeidx);
 }
-void SrcMgr::add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath, TCHAR* pydir,
-    TCHAR* args, TCHAR* cmd, int windowopt, int index)
+void SrcMgr::add_script(Command command, int index)
 {
-    Command command;
-    command.name = name;
-    command.exe = exe;
-    command.batpath = batpath;
-    command.pypath = pypath;
-    command.pydir = pydir;
-    command.args = args;
-    command.cmd = cmd;
-    command.windowopt = windowopt;
-
     if (index == -1) {
         SendMessage(m_combohwnd, CB_ADDSTRING, 0, (LPARAM)command.name);
         m_commands.push_back(command);
@@ -306,6 +292,7 @@ void SrcMgr::create_control()
     SetWindowSubclass(m_combogrouphwnd, &SubclassWindowProc, 0, 0);
 
     m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L" Drop argument files ");
+    m_dd_clearhwnd = create_button(m_dropgrouphwnd, 0, 0, 58, 17, IDC_CLEAR_ARG_BUTTON, (TCHAR*)L"Clear");
     m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 96);
     m_addarghwnd = create_button(m_dropgrouphwnd, 300, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
     m_delarghwnd = create_button(m_dropgrouphwnd, 300, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
@@ -367,6 +354,7 @@ void SrcMgr::set_font()
     SendMessage(m_delete_btnhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
 
     SendMessage(m_dropgrouphwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_dd_clearhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_dd_listhwnd, WM_SETFONT, (WPARAM)m_lsthFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_addgrouphwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_name_edithwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
@@ -477,7 +465,6 @@ int SrcMgr::get_combobox_index(TCHAR* itemstr)
     WPARAM index = SendMessage(m_combohwnd, CB_FINDSTRINGEXACT, -1, (LPARAM)itemstr);
     return index;
 }
-
 void SrcMgr::click_add_script(int index)
 {
     TCHAR namebuf[MAX_PATH] = { '\0' };
@@ -542,16 +529,16 @@ void SrcMgr::click_add_script(int index)
     cmd[0] = '\0';
     wcscat_s(cmd, MAX_PATH, L"cmd.exe");
 
-    add_script(
-        scriptname,
-        exename,
-        vpathbuf,
-        srcpathbuf,
-        dirpathbuf,
-        argsbuf,
-        cmd,
-        wopt,
-        index);
+    Command command;
+    command.name = scriptname;
+    command.exe = exename;
+    command.batpath = vpathbuf;
+    command.pypath = srcpathbuf;
+    command.pydir = dirpathbuf;
+    command.args = argsbuf;
+    command.cmd = cmd;
+    command.windowopt = wopt;
+    add_script(command, index);
 }
 void SrcMgr::add_arg_txt(HWND hDlg)
 {
@@ -672,16 +659,16 @@ void SrcMgr::read_setting_csv()
         wcscpy_s(cmd, MAX_PATH, strvec.at(idx + 6).c_str());
         int windowopt = std::stoi(strvec.at(idx + 7));
 
-        add_script(
-            name,
-            exe,
-            batpath,
-            pypath,
-            pydir,
-            args,
-            cmd,
-            windowopt,
-            -1);
+        Command command;
+        command.name = name;
+        command.exe = exe;
+        command.batpath = batpath;
+        command.pypath = pypath;
+        command.pydir = pydir;
+        command.args = args;
+        command.cmd = cmd;
+        command.windowopt = windowopt;
+        add_script(command, -1);
     }
 }
 int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
@@ -693,7 +680,7 @@ int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
 
     size_t uuu = 10000;
     size_t* u8len = &uuu;
-    UTF8* bufstr = new UTF8[*u8len];
+    UTF8* bufstr = new UTF8[*u8len + 1];
 
     if (utf8) {
         utf16_to_utf8(args, _tcslen(args), bufstr, u8len);
@@ -928,11 +915,11 @@ void SrcMgr::receive_args()
     std::wstring argstr = L"";
     for (int i = 1; i < argc; ++i) {
         argstr += argv[i];
-        if(i != argc-1)
+        if (i != argc - 1)
             argstr += L"\n";
     }
 
-    set_ddlist_value(argstr.c_str(), L"\n");
+    //set_ddlist_value(argstr.c_str(), L"\n");
 }
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -1029,6 +1016,10 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
         case ID_CLEAR_BUTTON: {
             g_srcmgr->reset_script_value();
+        } break;
+
+        case IDC_CLEAR_ARG_BUTTON: {
+            SendMessage(g_srcmgr->m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
         } break;
 
         case IDC_ADD_ARG_BUTTON: {

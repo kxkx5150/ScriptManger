@@ -32,6 +32,7 @@ public:
     HWND m_venv_dirbtn = nullptr;
     HWND m_stor_arg_chkboxhwnd = nullptr;
     HWND m_combohwnd = nullptr;
+    HWND m_dd_listhwnd = nullptr;
 
 private:
     HFONT m_hFont = nullptr;
@@ -44,7 +45,11 @@ private:
     HWND m_run_btnhwnd = nullptr;
     HWND m_delete_btnhwnd = nullptr;
 
-    HWND m_dd_listhwnd = nullptr;
+    HWND m_dd_clearhwnd = nullptr;
+    HWND m_addarghwnd = nullptr;
+    HWND m_delarghwnd = nullptr;
+    HWND m_uparghwnd = nullptr;
+    HWND m_downarghwnd = nullptr;
 
     HWND m_name_edithwnd = nullptr;
 
@@ -59,11 +64,6 @@ private:
     HWND m_add_btnhwnd = nullptr;
     HWND m_update_btnhwnd = nullptr;
     HWND m_clear_btnhwnd = nullptr;
-
-    HWND m_addarghwnd = nullptr;
-    HWND m_delarghwnd = nullptr;
-    HWND m_uparghwnd = nullptr;
-    HWND m_downarghwnd = nullptr;
 
     HWND m_src_filebtn = nullptr;
     HWND m_working_dirbtn = nullptr;
@@ -127,8 +127,7 @@ private:
     HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     void create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight);
 
-    void add_script(TCHAR* name, TCHAR* exe, TCHAR* batpath, TCHAR* pypath,
-        TCHAR* pydir, TCHAR* args, TCHAR* cmd, int windowopt, int index);
+    void add_script(Command command, int index);
 
     void select_combobox_item(int index);
     int get_combobox_index(TCHAR* itemstr);
