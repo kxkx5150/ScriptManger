@@ -953,7 +953,7 @@ INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
     return (INT_PTR)FALSE;
 }
 LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
-    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     switch (uMsg) {
     case WM_DROPFILES: {

@@ -3,11 +3,6 @@
 #include <strsafe.h>
 #include "framework.h"
 
-bool g_addgrop = true;
-bool g_systray = true;
-bool g_startup = false;
-bool g_osmenu = false;
-
 NOTIFYICONDATA g_nid;
 HMENU hPopMenu;
 int main_window_width = 340;
@@ -79,12 +74,10 @@ int setStartUp(HWND hWnd)
     HMENU hmenu = GetMenu(hWnd);
     UINT uState = GetMenuState(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND);
     if (uState & MFS_CHECKED) {
-        g_startup = true;
         RegDeleteValue(newValue, TEXT("Script_Manager_kxkx5150"));
         CheckMenuItem(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND | MFS_UNCHECKED);
 
     } else {
-        g_startup = false;
         DWORD pathLenInBytes = pathLen * sizeof(*szPath);
         if (RegSetValueEx(newValue,
                 TEXT("Script_Manager_kxkx5150"),
@@ -263,30 +256,25 @@ void setContextMenu(HWND hWnd)
         create_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150", L"\" \"%V\"");
     }
 }
-void toggle_check_menu(HWND hWnd, int menuid)
+void toggle_mode(HWND hWnd, int menuid)
 {
-    bool chkflg;
     HMENU hmenu = GetMenu(hWnd);
     UINT uState = GetMenuState(hmenu, menuid, MF_BYCOMMAND);
     if (uState & MFS_CHECKED) {
-        chkflg = false;
+        g_script_manager->resize_window(hWnd, false, add_group_height);
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
         main_window_height = 215;
     } else {
-        chkflg = true;
+        g_script_manager->resize_window(hWnd, true, add_group_height);
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
         main_window_height = 544;
-    }
-
-    if (g_script_manager) {
-        g_script_manager->resize_window(hWnd, chkflg, add_group_height);
     }
 }
 void toggle_sys_tray(HWND hWnd, int menuid)
 {
     HMENU hmenu = GetMenu(hWnd);
-    g_systray = !g_systray;
-    if (g_systray) {
+    UINT uState = GetMenuState(hmenu, menuid, MF_BYCOMMAND);
+    if (!uState) {
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
         Shell_NotifyIcon(NIM_ADD, &g_nid);
     } else {
@@ -340,7 +328,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 }
 void create_trayicon(HWND hWnd)
 {
-    if (!g_systray)
+    HMENU hmenu = GetMenu(hWnd);
+    UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+    if (!uState) 
         return;
     g_nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
     g_nid.hWnd = hWnd;
@@ -354,7 +344,9 @@ void create_trayicon(HWND hWnd)
 }
 void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
 {
-    if (!g_systray)
+    HMENU hmenu = GetMenu(hWnd);
+    UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+    if (!uState) 
         return;
     POINT p;
     GetCursorPos(&p);
@@ -422,7 +414,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case ID_SCRIPT_ADD:
-            toggle_check_menu(hWnd, ID_SCRIPT_ADD);
+            toggle_mode(hWnd, ID_SCRIPT_ADD);
             break;
 
         case ID_MENU_SYSTEMTRAY: {
@@ -455,7 +447,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_SIZE: {
         if (wParam == SIZE_MINIMIZED) {
-            if (!g_systray)
+            HMENU hmenu = GetMenu(hWnd);
+            UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+            if (!uState) 
                 return 0;
             ShowWindow(hWnd, SW_HIDE);
         }
