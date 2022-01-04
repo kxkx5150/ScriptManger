@@ -1,7 +1,7 @@
 ﻿#include "ScriptManager.h"
 #include "SrcMgr.h"
-#include <strsafe.h>
 #include "framework.h"
+#include <strsafe.h>
 
 NOTIFYICONDATA g_nid;
 HMENU hPopMenu;
@@ -26,12 +26,12 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = hInstance;
-    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON2));
     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_RUNPYTHON);
     wcex.lpszClassName = szWindowClass;
-    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_ICON2));
     return RegisterClassExW(&wcex);
 }
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
@@ -63,11 +63,8 @@ int setStartUp(HWND hWnd)
         return -1;
     }
     HKEY newValue;
-    if (RegOpenKey(HKEY_CURRENT_USER,
-            TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
-            &newValue)
-        != ERROR_SUCCESS) {
-        OutputDebugString(L"Error2");
+    std::wstring keystr = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+    if (RegOpenKey(HKEY_CURRENT_USER, keystr.c_str(), &newValue) != ERROR_SUCCESS) {
         return -1;
     }
 
@@ -330,14 +327,14 @@ void create_trayicon(HWND hWnd)
 {
     HMENU hmenu = GetMenu(hWnd);
     UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-    if (!uState) 
+    if (!uState)
         return;
     g_nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
     g_nid.hWnd = hWnd;
     g_nid.uID = IDR_MAINFRAME;
     g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     g_nid.uCallbackMessage = WM_TO_TRAY;
-    g_nid.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON1));
+    g_nid.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON2));
     wcscpy_s(g_nid.szTip, _T("Script Manager"));
     Shell_NotifyIcon(NIM_ADD, &g_nid);
     ShowWindow(hWnd, SW_HIDE);
@@ -346,7 +343,7 @@ void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
 {
     HMENU hmenu = GetMenu(hWnd);
     UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-    if (!uState) 
+    if (!uState)
         return;
     POINT p;
     GetCursorPos(&p);
@@ -373,6 +370,42 @@ void HandleCopyDataEvent(HWND main_window_handle, LPARAM lparam)
         show_main_window(main_window_handle, 180, 480);
         g_script_manager->receive_args(1, arguments);
     }
+}
+LONG GetStringRegKey(HKEY hKey, const std::wstring& strValueName, std::wstring& strValue, const std::wstring& strDefaultValue)
+{
+    strValue = strDefaultValue;
+    WCHAR szBuffer[512];
+    DWORD dwBufferSize = sizeof(szBuffer);
+    ULONG nError;
+    nError = RegQueryValueExW(hKey, strValueName.c_str(), 0, NULL, (LPBYTE)szBuffer, &dwBufferSize);
+    if (ERROR_SUCCESS == nError) {
+        strValue = szBuffer;
+    }
+    return nError;
+}
+bool get_regval(HWND hWnd, std::wstring keystr, std::wstring subkeystr)
+{
+    HKEY hKey;
+    if (RegOpenKey(HKEY_CURRENT_USER, keystr.c_str(), &hKey) == ERROR_SUCCESS) {
+        std::wstring strValueOfBinDir;
+        GetStringRegKey(hKey, subkeystr.c_str(), strValueOfBinDir, L"empty");
+        if (strValueOfBinDir != L"empty") {
+            return true;
+        }
+    }
+    return false;
+}
+void get_reg_sttings(HWND hWnd)
+{
+    HMENU hmenu = GetMenu(hWnd);
+    bool flg = get_regval(hWnd, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", L"Script_Manager_kxkx5150");
+    if (flg)
+        CheckMenuItem(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND | MFS_CHECKED);
+
+    flg = get_regval(hWnd, L"SOFTWARE\\Classes\\*\\shell\\Script_Manager_kxkx5150", L"");
+    if (flg)
+        CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_CHECKED);
+
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -449,7 +482,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (wParam == SIZE_MINIMIZED) {
             HMENU hmenu = GetMenu(hWnd);
             UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-            if (!uState) 
+            if (!uState)
                 return 0;
             ShowWindow(hWnd, SW_HIDE);
         }
@@ -487,7 +520,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_script_manager->read_setting_csv();
         TCHAR* cmdline = GetCommandLineW();
         g_script_manager->receive_args(1, cmdline);
-
+        get_reg_sttings(hWnd);
         createContextMenu();
         create_trayicon(hWnd);
 

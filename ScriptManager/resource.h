@@ -21,6 +21,7 @@
 #define IDC_SHOWCMD                     136
 #define IDC_HIDECMD                     137
 #define IDC_AUTOCLOSECMD                139
+#define IDI_ICON2                       140
 #define IDC_VENV_BUTTON                 150
 #define IDC_SRC_BUTTON                  151
 #define IDC_DIR_BUTTON                  152
@@ -67,7 +68,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        138
+#define _APS_NEXT_RESOURCE_VALUE        141
 #define _APS_NEXT_COMMAND_VALUE         32780
 #define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           110
