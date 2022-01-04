@@ -156,8 +156,6 @@
     <ResourceCompile Include="ScriptManager.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\..\Downloads\baticon.ico" />
-    <Image Include="..\..\..\..\Downloads\baticon.png" />
     <Image Include="appicon.ico" />
     <Image Include="baticon.ico" />
     <Image Include="ScriptManager.ico" />

@@ -37,86 +37,19 @@ void SrcMgr::init()
         select_combobox_item(0);
     }
 }
-void SrcMgr::set_script_value(int exeidx)
+void SrcMgr::delete_command(int exeidx)
 {
     Command cmd = m_commands[exeidx];
-    SetWindowText(m_name_edithwnd, cmd.name);
-    SetWindowText(m_cmd_edithwnd, cmd.exe);
-
-    SetWindowText(m_venv_pathhwnd, cmd.batpath);
-    if (0 < _tcslen(cmd.batpath)) {
-        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
-    } else {
-        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    }
-    change_venv_checkbox();
-
-    SetWindowText(m_src_pathhwnd, cmd.pypath);
-    change_script_path();
-    SetWindowText(m_dir_pathhwnd, cmd.pydir);
-
-    if (cmd.windowopt == SW_SHOWNORMAL) {
-        SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
-        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
-        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    } else if (cmd.windowopt == SW_HIDE) {
-        SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
-        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
-    } else {
-        SendMessage(m_autoclose, BM_SETCHECK, BST_CHECKED, 0);
-        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    }
-
-    if (0 < _tcslen(cmd.args)) {
-        SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
-    } else {
-        SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    }
-
-    SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
-    set_ddlist_value(cmd.args, L"\n");
+    delete[] cmd.name;
+    delete[] cmd.exe;
+    delete[] cmd.batpath;
+    delete[] cmd.pypath;
+    delete[] cmd.pydir;
+    delete[] cmd.args;
+    delete[] cmd.cmd;
+    m_commands.erase(m_commands.begin() + exeidx);
 }
-void SrcMgr::set_ddlist_value(const TCHAR* args, const TCHAR* delim)
-{
-    if (0 < _tcslen(args)) {
-        TCHAR* buftmp = new TCHAR[8191];
-        buftmp[0] = '\0';
-        std::wstring s = std::wstring(args);
-        std::wstring item;
-        for (TCHAR ch : s) {
-            if (ch == delim[0]) {
-                if (!item.empty())
-                    SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)item.c_str());
-                item.clear();
-            } else {
-                item += ch;
-            }
-        }
-        if (!item.empty())
-            SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)item.c_str());
-    }
-}
-void SrcMgr::reset_script_value()
-{
-    SetWindowText(m_name_edithwnd, L"");
-    SetWindowText(m_cmd_edithwnd, L"python.exe");
-    SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    SetWindowText(m_venv_pathhwnd, L"");
-    change_venv_checkbox();
-    SetWindowText(m_src_pathhwnd, L"");
-    change_script_path();
-    SetWindowText(m_dir_pathhwnd, L"");
 
-    SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
-    SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
-    SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-
-    SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
-    SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
-    SendMessage(m_combohwnd, CB_SETCURSEL, -1, 0);
-}
 void SrcMgr::change_select_combobox()
 {
     int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
@@ -131,46 +64,6 @@ void SrcMgr::change_select_combobox()
         EnableWindow(m_update_btnhwnd, true);
     }
 }
-void SrcMgr::change_venv_checkbox()
-{
-    if (BST_CHECKED == SendMessage(m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
-        EnableWindow(m_venv_pathhwnd, TRUE);
-        EnableWindow(m_venv_dirbtn, TRUE);
-    } else {
-        EnableWindow(m_venv_pathhwnd, FALSE);
-        EnableWindow(m_venv_dirbtn, FALSE);
-    }
-}
-void SrcMgr::change_script_path()
-{
-    TCHAR srcpathbuf[MAX_PATH];
-    GetWindowText(m_src_pathhwnd, srcpathbuf, MAX_PATH);
-    trim_tchar(srcpathbuf);
-    if (_tcslen(srcpathbuf) == 0) {
-        //EnableWindow(m_add_btnhwnd, false);
-        //EnableWindow(m_update_btnhwnd, false);
-    } else {
-        //EnableWindow(m_add_btnhwnd, true);
-        int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
-        if (exeidx == -1) {
-            EnableWindow(m_update_btnhwnd, false);
-        } else {
-            EnableWindow(m_update_btnhwnd, true);
-        }
-    }
-}
-void SrcMgr::delete_command(int exeidx)
-{
-    Command cmd = m_commands[exeidx];
-    delete[] cmd.name;
-    delete[] cmd.exe;
-    delete[] cmd.batpath;
-    delete[] cmd.pypath;
-    delete[] cmd.pydir;
-    delete[] cmd.args;
-    delete[] cmd.cmd;
-    m_commands.erase(m_commands.begin() + exeidx);
-}
 void SrcMgr::add_script(Command command, int index)
 {
     if (index == -1) {
@@ -183,6 +76,7 @@ void SrcMgr::add_script(Command command, int index)
         delete_command(index);
         m_commands.insert(m_commands.begin() + index, command);
     }
+    m_commandline_args = L"";
 }
 void SrcMgr::delete_script(int exeidx)
 {
@@ -197,21 +91,6 @@ void SrcMgr::delete_script(int exeidx)
     delete_command(exeidx);
     reset_script_value();
 }
-int SrcMgr::get_ddlist_value(TCHAR* listtxt)
-{
-    TCHAR* tmpbuf = new TCHAR[8191];
-    int items = SendMessage(m_dd_listhwnd, LB_GETCOUNT, 0, 0);
-    for (size_t i = 0; i < items; i++) {
-        SendMessage(m_dd_listhwnd, LB_GETTEXT, i, (LPARAM)tmpbuf);
-        wcscat_s(listtxt, 8191, tmpbuf);
-        if (i != items - 1) {
-            wcscat_s(listtxt, 8191, L"\n");
-        }
-        tmpbuf[0] = '\0';
-    }
-    delete[] tmpbuf;
-    return items;
-}
 void SrcMgr::exe_script(int exeidx)
 {
     auto comcount = m_commands.size();
@@ -219,6 +98,9 @@ void SrcMgr::exe_script(int exeidx)
         return;
     if (exeidx == -1)
         exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+    if (exeidx == -1)
+        return;
+
     Command command = m_commands[exeidx];
 
     int windowopt = m_commands[exeidx].windowopt;
@@ -277,10 +159,140 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(pdir, MAX_PATH, L"\"");
 
     ShellExecute(NULL, L"open", command.cmd, bat, pdir, windowopt);
+    m_commandline_args = L"";
     delete[] args;
     delete[] listtxt;
     delete[] pdir;
 }
+
+void SrcMgr::set_script_value(int exeidx)
+{
+    Command cmd = m_commands[exeidx];
+    SetWindowText(m_name_edithwnd, cmd.name);
+    SetWindowText(m_cmd_edithwnd, cmd.exe);
+
+    SetWindowText(m_venv_pathhwnd, cmd.batpath);
+    if (0 < _tcslen(cmd.batpath)) {
+        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    }
+    change_venv_checkbox();
+
+    SetWindowText(m_src_pathhwnd, cmd.pypath);
+    change_script_path();
+    SetWindowText(m_dir_pathhwnd, cmd.pydir);
+
+    if (cmd.windowopt == SW_SHOWNORMAL) {
+        SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
+        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    } else if (cmd.windowopt == SW_HIDE) {
+        SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
+        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessage(m_autoclose, BM_SETCHECK, BST_CHECKED, 0);
+        SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+        SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    }
+
+    if (0 < _tcslen(cmd.args)) {
+        SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    }
+
+    SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
+    set_ddlist_value(cmd.args, L"\n");
+    set_ddlist_value(m_commandline_args.c_str(), L"\n");
+}
+void SrcMgr::reset_script_value()
+{
+    SetWindowText(m_name_edithwnd, L"");
+    SetWindowText(m_cmd_edithwnd, L"python.exe");
+    SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    SetWindowText(m_venv_pathhwnd, L"");
+    change_venv_checkbox();
+    SetWindowText(m_src_pathhwnd, L"");
+    change_script_path();
+    SetWindowText(m_dir_pathhwnd, L"");
+
+    SendMessage(m_autoclose, BM_SETCHECK, BST_UNCHECKED, 0);
+    SendMessage(m_showcmdhwnd, BM_SETCHECK, BST_CHECKED, 0);
+    SendMessage(m_hidecmdhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+
+    SendMessage(m_stor_arg_chkboxhwnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    SendMessage(m_dd_listhwnd, LB_RESETCONTENT, 0, 0);
+    SendMessage(m_combohwnd, CB_SETCURSEL, -1, 0);
+    m_commandline_args = L"";
+}
+
+void SrcMgr::set_ddlist_value(const TCHAR* args, const TCHAR* delim)
+{
+    if (0 < _tcslen(args)) {
+        TCHAR* buftmp = new TCHAR[8191];
+        buftmp[0] = '\0';
+        std::wstring s = std::wstring(args);
+        std::wstring item;
+        for (TCHAR ch : s) {
+            if (ch == delim[0]) {
+                if (!item.empty())
+                    SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)item.c_str());
+                item.clear();
+            } else {
+                item += ch;
+            }
+        }
+        if (!item.empty())
+            SendMessage(m_dd_listhwnd, LB_ADDSTRING, 0, (LPARAM)item.c_str());
+    }
+}
+int SrcMgr::get_ddlist_value(TCHAR* listtxt)
+{
+    TCHAR* tmpbuf = new TCHAR[8191];
+    int items = SendMessage(m_dd_listhwnd, LB_GETCOUNT, 0, 0);
+    for (size_t i = 0; i < items; i++) {
+        SendMessage(m_dd_listhwnd, LB_GETTEXT, i, (LPARAM)tmpbuf);
+        wcscat_s(listtxt, 8191, tmpbuf);
+        if (i != items - 1) {
+            wcscat_s(listtxt, 8191, L"\n");
+        }
+        tmpbuf[0] = '\0';
+    }
+    delete[] tmpbuf;
+    return items;
+}
+
+void SrcMgr::change_venv_checkbox()
+{
+    if (BST_CHECKED == SendMessage(m_venv_chkboxhwnd, BM_GETCHECK, 0, 0)) {
+        EnableWindow(m_venv_pathhwnd, TRUE);
+        EnableWindow(m_venv_dirbtn, TRUE);
+    } else {
+        EnableWindow(m_venv_pathhwnd, FALSE);
+        EnableWindow(m_venv_dirbtn, FALSE);
+    }
+}
+void SrcMgr::change_script_path()
+{
+    TCHAR srcpathbuf[MAX_PATH];
+    GetWindowText(m_src_pathhwnd, srcpathbuf, MAX_PATH);
+    trim_tchar(srcpathbuf);
+    if (_tcslen(srcpathbuf) == 0) {
+        //EnableWindow(m_add_btnhwnd, false);
+        //EnableWindow(m_update_btnhwnd, false);
+    } else {
+        //EnableWindow(m_add_btnhwnd, true);
+        int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
+        if (exeidx == -1) {
+            EnableWindow(m_update_btnhwnd, false);
+        } else {
+            EnableWindow(m_update_btnhwnd, true);
+        }
+    }
+}
+
 void SrcMgr::create_control()
 {
     m_hFont = create_font(16);
@@ -329,7 +341,7 @@ void SrcMgr::create_control()
     m_update_btnhwnd = create_button(m_addgrouphwnd, 115, 270, 90, 32, ID_UPDATE_BUTTON, (TCHAR*)L"Update");
     m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
 
-    m_search_grouphwnd = create_group(m_prnthwnd, 2, 116, 320, 190, (TCHAR*)L" Search ", IDC_SEARCHGROUP);
+    m_search_grouphwnd = create_group(m_prnthwnd, 2, 2, 320, 190, (TCHAR*)L" Search ", IDC_SEARCHGROUP);
     ShowWindow(m_search_grouphwnd, SW_HIDE);
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
@@ -458,6 +470,7 @@ void SrcMgr::create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, in
         nX + 180, nY, nWidth - 14, nHeight,
         hParent, (HMENU)IDC_HIDECMD, m_hInst, NULL);
 }
+
 void SrcMgr::select_combobox_item(int index)
 {
     m_activeidx = index;
@@ -543,6 +556,7 @@ void SrcMgr::click_add_script(int index)
     command.windowopt = wopt;
     add_script(command, index);
 }
+
 void SrcMgr::add_arg_txt(HWND hDlg)
 {
     HWND ehwnd = GetDlgItem(hDlg, IDC_ARG_EDIT);
@@ -599,6 +613,7 @@ void SrcMgr::click_down_arg()
     SendMessage(m_dd_listhwnd, LB_INSERTSTRING, exeidx, (LPARAM)tmptxt);
     SendMessage(m_dd_listhwnd, LB_SETCURSEL, exeidx + 1, 0);
 }
+
 void SrcMgr::write_setting_csv()
 {
     std::wstring argstr = L"";
@@ -674,6 +689,7 @@ void SrcMgr::read_setting_csv()
         add_script(command, -1);
     }
 }
+
 int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
 {
     TCHAR m_Path[MAX_PATH] = { '\0' };
@@ -832,6 +848,7 @@ void SrcMgr::exe_directory_path(TCHAR* path)
         *ptmp = '\0';
     }
 }
+
 std::vector<std::wstring> SrcMgr::split(std::wstring& input, TCHAR delimiter)
 {
     std::wistringstream stream(input);
@@ -905,7 +922,7 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
         ShowWindow(m_addgrouphwnd, SW_HIDE);
 
         ShowWindow(m_search_grouphwnd, SW_SHOWNORMAL);
-        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 2, 0, 0, SWP_NOSIZE);
+        SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 194, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
     }
 }
@@ -921,9 +938,10 @@ void SrcMgr::receive_args(int idx, const TCHAR* cmdline)
         if (i != argc - 1)
             argstr += L"\n";
     }
-
-    set_ddlist_value(argstr.c_str(), L"\n");
+    m_commandline_args = argstr;
+    set_ddlist_value(m_commandline_args.c_str(), L"\n");
 }
+
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -953,7 +971,7 @@ INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
     return (INT_PTR)FALSE;
 }
 LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
-LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     switch (uMsg) {
     case WM_DROPFILES: {

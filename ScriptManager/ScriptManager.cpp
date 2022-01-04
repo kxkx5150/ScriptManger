@@ -279,6 +279,18 @@ void toggle_sys_tray(HWND hWnd, int menuid)
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
     }
 }
+void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
+{
+    HMENU hmenu = GetMenu(hWnd);
+    UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+    if (!uState)
+        return;
+    POINT p;
+    GetCursorPos(&p);
+    SetForegroundWindow(hWnd);
+    ShowWindow(hWnd, SW_SHOWNORMAL);
+    SetWindowPos(hWnd, NULL, p.x - main_window_width + ofx, p.y - main_window_height - 20 + ofy, 0, 0, SWP_NOSIZE);
+}
 void send_args(HWND mainhwnd)
 {
     std::wstring s = ::GetCommandLine();
@@ -289,6 +301,18 @@ void send_args(HWND mainhwnd)
     data_to_send.cbData = (DWORD)8191;
     data_to_send.lpData = buffer;
     SendMessage(mainhwnd, WM_COPYDATA, 0, (LPARAM)&data_to_send);
+}
+void receive_args(HWND main_window_handle, LPARAM lparam)
+{
+    UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
+    COPYDATASTRUCT* copy_data_structure = { 0 };
+    copy_data_structure = (COPYDATASTRUCT*)lparam;
+    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
+
+    if (copy_data_structure->dwData == uMessage) {
+        show_main_window(main_window_handle, 180, 480);
+        g_script_manager->receive_args(1, arguments);
+    }
 }
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
@@ -339,18 +363,6 @@ void create_trayicon(HWND hWnd)
     Shell_NotifyIcon(NIM_ADD, &g_nid);
     ShowWindow(hWnd, SW_HIDE);
 }
-void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
-{
-    HMENU hmenu = GetMenu(hWnd);
-    UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-    if (!uState)
-        return;
-    POINT p;
-    GetCursorPos(&p);
-    SetForegroundWindow(hWnd);
-    ShowWindow(hWnd, SW_SHOWNORMAL);
-    SetWindowPos(hWnd, NULL, p.x - main_window_width + ofx, p.y - main_window_height - 20 + ofy, 0, 0, SWP_NOSIZE);
-}
 void createContextMenu()
 {
     hPopMenu = CreatePopupMenu();
@@ -359,18 +371,7 @@ void createContextMenu()
     AppendMenu(hPopMenu, MF_SEPARATOR, NULL, _T("SEP"));
     AppendMenu(hPopMenu, MF_BYPOSITION | MF_STRING, IDM_EXIT, L"Exit");
 }
-void HandleCopyDataEvent(HWND main_window_handle, LPARAM lparam)
-{
-    UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
-    COPYDATASTRUCT* copy_data_structure = { 0 };
-    copy_data_structure = (COPYDATASTRUCT*)lparam;
-    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
 
-    if (copy_data_structure->dwData == uMessage) {
-        show_main_window(main_window_handle, 180, 480);
-        g_script_manager->receive_args(1, arguments);
-    }
-}
 LONG GetStringRegKey(HKEY hKey, const std::wstring& strValueName, std::wstring& strValue, const std::wstring& strDefaultValue)
 {
     strValue = strDefaultValue;
@@ -468,7 +469,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_COPYDATA: {
-        HandleCopyDataEvent(hWnd, lParam);
+        receive_args(hWnd, lParam);
 
     } break;
 

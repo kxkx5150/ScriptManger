@@ -73,6 +73,8 @@ private:
     std::vector<Command> m_commands;
     int m_activeidx = -1;
 
+    std::wstring m_commandline_args = L"";
+
 public:
     SrcMgr(HWND hWnd, HINSTANCE hInst);
     ~SrcMgr();
