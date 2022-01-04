@@ -78,7 +78,7 @@ public:
     ~SrcMgr();
 
     void init();
-    void receive_args();
+    void receive_args(int idx, const TCHAR* cmdline);
     void resize_window(HWND hWnd, bool addmenu, int addarea);
 
     void change_venv_checkbox();

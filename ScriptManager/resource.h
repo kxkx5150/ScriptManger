@@ -18,11 +18,9 @@
 #define IDC_VENVPATH                    133
 #define IDC_SRCPATH                     134
 #define IDC_WDIRPATH                    135
-
 #define IDC_SHOWCMD                     136
 #define IDC_HIDECMD                     137
-#define IDC_AUTOCLOSECMD				139
-
+#define IDC_AUTOCLOSECMD                139
 #define IDC_VENV_BUTTON                 150
 #define IDC_SRC_BUTTON                  151
 #define IDC_DIR_BUTTON                  152
@@ -38,10 +36,9 @@
 #define ID_CLEAR_BUTTON                 170
 #define IDD_ABOUTBOX                    173
 #define IDC_ADDGROUP                    175
-#define IDC_SEARCHGROUP					176
-#define SW_AUTOCLOSE					177
-#define IDC_CLEAR_ARG_BUTTON			178
-
+#define IDC_SEARCHGROUP                 176
+#define SW_AUTOCLOSE                    177
+#define IDC_CLEAR_ARG_BUTTON            178
 #define IDB_BITMAP1                     183
 #define IDD_DIALOGBAR                   186
 #define IDS_LISTBOX                     198
@@ -62,7 +59,7 @@
 #define ID_MENU_ABOUT                   32776
 #define ID_MENU_SYSTEMTRAY              32777
 #define ID_MENU_STARTUP                 32778
-
+#define ID_MENU_EXPLORERMENU            32779
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -71,7 +68,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        138
-#define _APS_NEXT_COMMAND_VALUE         32779
+#define _APS_NEXT_COMMAND_VALUE         32780
 #define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

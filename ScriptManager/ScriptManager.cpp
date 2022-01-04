@@ -1,11 +1,12 @@
 ﻿#include "ScriptManager.h"
 #include "SrcMgr.h"
+#include <strsafe.h>
 #include "framework.h"
 
 bool g_addgrop = true;
 bool g_systray = true;
 bool g_startup = false;
-bool g_osmenu = true;
+bool g_osmenu = false;
 
 NOTIFYICONDATA g_nid;
 HMENU hPopMenu;
@@ -78,10 +79,12 @@ int setStartUp(HWND hWnd)
     HMENU hmenu = GetMenu(hWnd);
     UINT uState = GetMenuState(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND);
     if (uState & MFS_CHECKED) {
+        g_startup = true;
         RegDeleteValue(newValue, TEXT("Script_Manager_kxkx5150"));
         CheckMenuItem(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND | MFS_UNCHECKED);
 
     } else {
+        g_startup = false;
         DWORD pathLenInBytes = pathLen * sizeof(*szPath);
         if (RegSetValueEx(newValue,
                 TEXT("Script_Manager_kxkx5150"),
@@ -98,6 +101,167 @@ int setStartUp(HWND hWnd)
 
     RegCloseKey(newValue);
     return 0;
+}
+BOOL create_shellreg(const TCHAR* parentkey, const TCHAR* key, const TCHAR* optstr)
+{
+    TCHAR szPath[MAX_PATH];
+    DWORD pathLen = GetModuleFileName(NULL, szPath, MAX_PATH);
+    if (pathLen == 0) {
+        return -1;
+    }
+    HKEY hpkey;
+    if (RegOpenKey(HKEY_CURRENT_USER, parentkey, &hpkey) != ERROR_SUCCESS) {
+        return -1;
+    }
+
+    HKEY hKey;
+    DWORD Ret;
+    DWORD dwDisposition;
+    std::wstring keystr = parentkey;
+    keystr += L"\\";
+    keystr += key;
+    if (RegOpenKey(HKEY_CURRENT_USER, keystr.c_str(), &hKey) != ERROR_SUCCESS) {
+        Ret = RegCreateKeyEx(HKEY_CURRENT_USER, keystr.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE,
+            KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition);
+        if (Ret != ERROR_SUCCESS)
+            return FALSE;
+
+        std::wstring regstr = L"Open with Script Manager";
+        DWORD regvallen = regstr.size() * sizeof(wchar_t);
+        if (RegSetValueEx(hKey, NULL, 0, REG_SZ,
+                (LPBYTE)regstr.c_str(),
+                regvallen)
+            != ERROR_SUCCESS) {
+
+            RegCloseKey(hKey);
+            RegCloseKey(hpkey);
+            return -1;
+        }
+
+        HKEY hcKey;
+        std::wstring cmdstr = keystr;
+        cmdstr += L"\\";
+        cmdstr += L"command";
+        Ret = RegCreateKeyEx(HKEY_CURRENT_USER, cmdstr.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE,
+            KEY_ALL_ACCESS, NULL, &hcKey, &dwDisposition);
+        if (Ret != ERROR_SUCCESS)
+            return FALSE;
+
+        std::wstring exepath = L"\"";
+        exepath += szPath;
+        exepath += optstr;
+        DWORD exepathlen = exepath.size() * sizeof(wchar_t);
+        RegSetValueEx(hcKey, NULL, 0, REG_EXPAND_SZ,
+            (LPBYTE)exepath.c_str(),
+            exepathlen);
+
+        RegCloseKey(hcKey);
+        RegCloseKey(hKey);
+        RegCloseKey(hpkey);
+        return TRUE;
+    }
+
+    RegCloseKey(hpkey);
+    return TRUE;
+}
+BOOL RegDelnodeRecurse(HKEY hKeyRoot, LPTSTR lpSubKey)
+{
+    LPTSTR lpEnd;
+    LONG lResult;
+    DWORD dwSize;
+    TCHAR szName[MAX_PATH];
+    HKEY hKey;
+    FILETIME ftWrite;
+
+    // First, see if we can delete the key without having
+    // to recurse.
+
+    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
+
+    if (lResult == ERROR_SUCCESS)
+        return TRUE;
+
+    lResult = RegOpenKeyEx(hKeyRoot, lpSubKey, 0, KEY_READ, &hKey);
+
+    if (lResult != ERROR_SUCCESS) {
+        if (lResult == ERROR_FILE_NOT_FOUND) {
+            printf("Key not found.\n");
+            return TRUE;
+        } else {
+            printf("Error opening key.\n");
+            return FALSE;
+        }
+    }
+
+    // Check for an ending slash and add one if it is missing.
+
+    lpEnd = lpSubKey + lstrlen(lpSubKey);
+
+    if (*(lpEnd - 1) != TEXT('\\')) {
+        *lpEnd = TEXT('\\');
+        lpEnd++;
+        *lpEnd = TEXT('\0');
+    }
+
+    // Enumerate the keys
+
+    dwSize = MAX_PATH;
+    lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
+        NULL, NULL, &ftWrite);
+
+    if (lResult == ERROR_SUCCESS) {
+        do {
+
+            StringCchCopy(lpEnd, MAX_PATH * 2, szName);
+
+            if (!RegDelnodeRecurse(hKeyRoot, lpSubKey)) {
+                break;
+            }
+
+            dwSize = MAX_PATH;
+
+            lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
+                NULL, NULL, &ftWrite);
+
+        } while (lResult == ERROR_SUCCESS);
+    }
+
+    lpEnd--;
+    *lpEnd = TEXT('\0');
+
+    RegCloseKey(hKey);
+
+    // Try again to delete the key.
+
+    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
+
+    if (lResult == ERROR_SUCCESS)
+        return TRUE;
+
+    return FALSE;
+}
+void delete_shellreg(const TCHAR* parentkey, const TCHAR* key)
+{
+    std::wstring s = parentkey;
+    s += L"\\";
+    s += key;
+    TCHAR szDelKey[MAX_PATH * 2];
+    wcscpy_s(szDelKey, MAX_PATH, s.c_str());
+    RegDelnodeRecurse(HKEY_CURRENT_USER, szDelKey);
+}
+void setContextMenu(HWND hWnd)
+{
+    HMENU hmenu = GetMenu(hWnd);
+    UINT uState = GetMenuState(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND);
+    if (uState & MFS_CHECKED) {
+        CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_UNCHECKED);
+        delete_shellreg(L"SOFTWARE\\Classes\\*\\shell", L"Script_Manager_kxkx5150");
+        delete_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150");
+    } else {
+        CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_CHECKED);
+        create_shellreg(L"SOFTWARE\\Classes\\*\\shell", L"Script_Manager_kxkx5150", L"\" \"%1\"");
+        create_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150", L"\" \"%V\"");
+    }
 }
 void toggle_check_menu(HWND hWnd, int menuid)
 {
@@ -188,7 +352,7 @@ void create_trayicon(HWND hWnd)
     Shell_NotifyIcon(NIM_ADD, &g_nid);
     ShowWindow(hWnd, SW_HIDE);
 }
-void show_main_window(HWND hWnd)
+void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
 {
     if (!g_systray)
         return;
@@ -196,7 +360,7 @@ void show_main_window(HWND hWnd)
     GetCursorPos(&p);
     SetForegroundWindow(hWnd);
     ShowWindow(hWnd, SW_SHOWNORMAL);
-    SetWindowPos(hWnd, NULL, p.x - main_window_width, p.y - main_window_height - 20, 0, 0, SWP_NOSIZE);
+    SetWindowPos(hWnd, NULL, p.x - main_window_width + ofx, p.y - main_window_height - 20 + ofy, 0, 0, SWP_NOSIZE);
 }
 void createContextMenu()
 {
@@ -205,6 +369,18 @@ void createContextMenu()
     AppendMenu(hPopMenu, MF_BYPOSITION | MF_STRING, IDC_RMENU_TERMINAL_AS, L"Terminal (admin)");
     AppendMenu(hPopMenu, MF_SEPARATOR, NULL, _T("SEP"));
     AppendMenu(hPopMenu, MF_BYPOSITION | MF_STRING, IDM_EXIT, L"Exit");
+}
+void HandleCopyDataEvent(HWND main_window_handle, LPARAM lparam)
+{
+    UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
+    COPYDATASTRUCT* copy_data_structure = { 0 };
+    copy_data_structure = (COPYDATASTRUCT*)lparam;
+    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
+
+    if (copy_data_structure->dwData == uMessage) {
+        show_main_window(main_window_handle, 180, 480);
+        g_script_manager->receive_args(1, arguments);
+    }
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -221,18 +397,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
-}
-void HandleCopyDataEvent(HWND main_window_handle, LPARAM lparam)
-{
-    UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
-    COPYDATASTRUCT* copy_data_structure = { 0 };
-    copy_data_structure = (COPYDATASTRUCT*)lparam;
-    LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
-
-    if (copy_data_structure->dwData == uMessage) {
-        OutputDebugString(arguments);
-        OutputDebugString(L"\n");
-    }
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -267,6 +431,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case ID_MENU_STARTUP: {
             setStartUp(hWnd);
+        } break;
+
+        case ID_MENU_EXPLORERMENU: {
+            setContextMenu(hWnd);
         } break;
 
         default:
@@ -323,7 +491,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_script_manager = new SrcMgr(hWnd, hInst);
         g_script_manager->init();
         g_script_manager->read_setting_csv();
-        g_script_manager->receive_args();
+        TCHAR* cmdline = GetCommandLineW();
+        g_script_manager->receive_args(1, cmdline);
 
         createContextMenu();
         create_trayicon(hWnd);

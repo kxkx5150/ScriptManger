@@ -148,7 +148,7 @@ void SrcMgr::change_script_path()
     trim_tchar(srcpathbuf);
     if (_tcslen(srcpathbuf) == 0) {
         //EnableWindow(m_add_btnhwnd, false);
-        EnableWindow(m_update_btnhwnd, false);
+        //EnableWindow(m_update_btnhwnd, false);
     } else {
         //EnableWindow(m_add_btnhwnd, true);
         int exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
@@ -235,10 +235,13 @@ void SrcMgr::exe_script(int exeidx)
 
     wcscat_s(args, 8191, L"\r\n");
     wcscat_s(args, 8191, command.exe);
-    wcscat_s(args, 8191, L"\ ");
-    wcscat_s(args, 8191, L"\"");
-    wcscat_s(args, 8191, command.pypath);
-    wcscat_s(args, 8191, L"\"");
+
+    if (_tcslen(command.pypath) > 0) {
+        wcscat_s(args, 8191, L"\ ");
+        wcscat_s(args, 8191, L"\"");
+        wcscat_s(args, 8191, command.pypath);
+        wcscat_s(args, 8191, L"\"");
+    }
 
     TCHAR* listtxt = new TCHAR[8191];
     listtxt[0] = '\0';
@@ -906,20 +909,20 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
     }
 }
-void SrcMgr::receive_args()
+void SrcMgr::receive_args(int idx, const TCHAR* cmdline)
 {
     int argc;
-    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (argc < 2)
+    LPWSTR* argv = CommandLineToArgvW(cmdline, &argc);
+    if (argc < idx + 1)
         return;
     std::wstring argstr = L"";
-    for (int i = 1; i < argc; ++i) {
+    for (int i = idx; i < argc; ++i) {
         argstr += argv[i];
         if (i != argc - 1)
             argstr += L"\n";
     }
 
-    //set_ddlist_value(argstr.c_str(), L"\n");
+    set_ddlist_value(argstr.c_str(), L"\n");
 }
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -949,7 +952,8 @@ INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 
     return (INT_PTR)FALSE;
 }
-LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     switch (uMsg) {
     case WM_DROPFILES: {
