@@ -76,7 +76,7 @@ void SrcMgr::add_script(Command command, int index)
         delete_command(index);
         m_commands.insert(m_commands.begin() + index, command);
     }
-    m_commandline_args = L"";
+    //m_commandline_args = L"";
 }
 void SrcMgr::delete_script(int exeidx)
 {
@@ -159,7 +159,7 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(pdir, MAX_PATH, L"\"");
 
     ShellExecute(NULL, L"open", command.cmd, bat, pdir, windowopt);
-    m_commandline_args = L"";
+    //m_commandline_args = L"";
     delete[] args;
     delete[] listtxt;
     delete[] pdir;
@@ -933,7 +933,7 @@ void SrcMgr::receive_args(int idx, const TCHAR* cmdline)
     if (argc < idx + 1)
         return;
     std::wstring argstr = L"";
-    for (int i = idx; i < argc; ++i) {
+    for (int i = idx; i < argc; i++) {
         argstr += argv[i];
         if (i != argc - 1)
             argstr += L"\n";

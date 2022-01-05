@@ -92,7 +92,15 @@ int setStartUp(HWND hWnd)
     RegCloseKey(newValue);
     return 0;
 }
-BOOL create_shellreg(const TCHAR* parentkey, const TCHAR* key, const TCHAR* optstr)
+void delete_regkey(const TCHAR* key)
+{
+    HKEY newValue;
+    if (RegOpenKey(HKEY_CURRENT_USER, L"SOFTWARE\\Script_Manager_kxkx5150", &newValue) != ERROR_SUCCESS)
+        return;
+    RegDeleteValue(newValue, key);
+}
+BOOL create_shellreg(const TCHAR* parentkey, const TCHAR* key,
+    const TCHAR* valname, const TCHAR* val, const TCHAR* optstr, bool createsub = true)
 {
     TCHAR szPath[MAX_PATH];
     DWORD pathLen = GetModuleFileName(NULL, szPath, MAX_PATH);
@@ -110,22 +118,28 @@ BOOL create_shellreg(const TCHAR* parentkey, const TCHAR* key, const TCHAR* opts
     std::wstring keystr = parentkey;
     keystr += L"\\";
     keystr += key;
-    if (RegOpenKey(HKEY_CURRENT_USER, keystr.c_str(), &hKey) != ERROR_SUCCESS) {
+    if (RegOpenKey(HKEY_CURRENT_USER, keystr.c_str(), &hKey) != ERROR_SUCCESS || !createsub) {
         Ret = RegCreateKeyEx(HKEY_CURRENT_USER, keystr.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE,
             KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition);
         if (Ret != ERROR_SUCCESS)
             return FALSE;
 
-        std::wstring regstr = L"Open with Script Manager";
+        std::wstring regstr = val;
         DWORD regvallen = regstr.size() * sizeof(wchar_t);
-        if (RegSetValueEx(hKey, NULL, 0, REG_SZ,
+        if (RegSetValueEx(hKey, valname, 0, REG_SZ,
                 (LPBYTE)regstr.c_str(),
                 regvallen)
             != ERROR_SUCCESS) {
 
             RegCloseKey(hKey);
             RegCloseKey(hpkey);
-            return -1;
+            return FALSE;
+        }
+
+        if (!createsub) {
+            RegCloseKey(hKey);
+            RegCloseKey(hpkey);
+            return TRUE;
         }
 
         HKEY hcKey;
@@ -163,53 +177,37 @@ BOOL RegDelnodeRecurse(HKEY hKeyRoot, LPTSTR lpSubKey)
     HKEY hKey;
     FILETIME ftWrite;
 
-    // First, see if we can delete the key without having
-    // to recurse.
-
     lResult = RegDeleteKey(hKeyRoot, lpSubKey);
-
     if (lResult == ERROR_SUCCESS)
         return TRUE;
 
     lResult = RegOpenKeyEx(hKeyRoot, lpSubKey, 0, KEY_READ, &hKey);
-
     if (lResult != ERROR_SUCCESS) {
         if (lResult == ERROR_FILE_NOT_FOUND) {
-            printf("Key not found.\n");
             return TRUE;
         } else {
-            printf("Error opening key.\n");
             return FALSE;
         }
     }
 
-    // Check for an ending slash and add one if it is missing.
-
     lpEnd = lpSubKey + lstrlen(lpSubKey);
-
     if (*(lpEnd - 1) != TEXT('\\')) {
         *lpEnd = TEXT('\\');
         lpEnd++;
         *lpEnd = TEXT('\0');
     }
 
-    // Enumerate the keys
-
     dwSize = MAX_PATH;
     lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
         NULL, NULL, &ftWrite);
-
     if (lResult == ERROR_SUCCESS) {
         do {
-
             StringCchCopy(lpEnd, MAX_PATH * 2, szName);
-
             if (!RegDelnodeRecurse(hKeyRoot, lpSubKey)) {
                 break;
             }
 
             dwSize = MAX_PATH;
-
             lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
                 NULL, NULL, &ftWrite);
 
@@ -220,11 +218,7 @@ BOOL RegDelnodeRecurse(HKEY hKeyRoot, LPTSTR lpSubKey)
     *lpEnd = TEXT('\0');
 
     RegCloseKey(hKey);
-
-    // Try again to delete the key.
-
     lResult = RegDeleteKey(hKeyRoot, lpSubKey);
-
     if (lResult == ERROR_SUCCESS)
         return TRUE;
 
@@ -249,8 +243,12 @@ void setContextMenu(HWND hWnd)
         delete_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150");
     } else {
         CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_CHECKED);
-        create_shellreg(L"SOFTWARE\\Classes\\*\\shell", L"Script_Manager_kxkx5150", L"\" \"%1\"");
-        create_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150", L"\" \"%V\"");
+        create_shellreg(L"SOFTWARE\\Classes\\*\\shell", L"Script_Manager_kxkx5150",
+            L"", L"Open with Script Manager",
+            L"\" \"%1\"");
+        create_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150",
+            L"", L"Open with Script Manager",
+            L"\" \"%V\"");
     }
 }
 void toggle_mode(HWND hWnd, int menuid)
@@ -260,10 +258,18 @@ void toggle_mode(HWND hWnd, int menuid)
     if (uState & MFS_CHECKED) {
         g_script_manager->resize_window(hWnd, false, add_group_height);
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
-        main_window_height = 215;
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"mode", L"search",
+            L"", false);
+
+        main_window_height = 358;
     } else {
         g_script_manager->resize_window(hWnd, true, add_group_height);
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"mode", L"add",
+            L"", false);
+
         main_window_height = 544;
     }
 }
@@ -273,9 +279,15 @@ void toggle_sys_tray(HWND hWnd, int menuid)
     UINT uState = GetMenuState(hmenu, menuid, MF_BYCOMMAND);
     if (!uState) {
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"systray", L"enable",
+            L"", false);
         Shell_NotifyIcon(NIM_ADD, &g_nid);
     } else {
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"systray",L"disable",
+            L"", false);
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
     }
 }
@@ -384,29 +396,36 @@ LONG GetStringRegKey(HKEY hKey, const std::wstring& strValueName, std::wstring& 
     }
     return nError;
 }
-bool get_regval(HWND hWnd, std::wstring keystr, std::wstring subkeystr)
+std::wstring get_regval(HWND hWnd, std::wstring keystr, std::wstring subkeystr)
 {
     HKEY hKey;
     if (RegOpenKey(HKEY_CURRENT_USER, keystr.c_str(), &hKey) == ERROR_SUCCESS) {
         std::wstring strValueOfBinDir;
         GetStringRegKey(hKey, subkeystr.c_str(), strValueOfBinDir, L"empty");
-        if (strValueOfBinDir != L"empty") {
-            return true;
-        }
+        return strValueOfBinDir;
     }
-    return false;
+    return L"empty";
 }
 void get_reg_sttings(HWND hWnd)
 {
     HMENU hmenu = GetMenu(hWnd);
-    bool flg = get_regval(hWnd, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", L"Script_Manager_kxkx5150");
-    if (flg)
+    std::wstring str = get_regval(hWnd, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", L"Script_Manager_kxkx5150");
+    if (str != L"empty")
         CheckMenuItem(hmenu, ID_MENU_STARTUP, MF_BYCOMMAND | MFS_CHECKED);
 
-    flg = get_regval(hWnd, L"SOFTWARE\\Classes\\*\\shell\\Script_Manager_kxkx5150", L"");
-    if (flg)
+    str = get_regval(hWnd, L"SOFTWARE\\Classes\\*\\shell\\Script_Manager_kxkx5150", L"");
+    if (str != L"empty")
         CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_CHECKED);
 
+    str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"mode");
+    if (str == L"search") {
+        toggle_mode(hWnd, ID_SCRIPT_ADD);
+    }
+
+    str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"systray");
+    if (str == L"disable") {
+        toggle_sys_tray(hWnd, ID_MENU_SYSTEMTRAY);
+    }
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -521,9 +540,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_script_manager->read_setting_csv();
         TCHAR* cmdline = GetCommandLineW();
         g_script_manager->receive_args(1, cmdline);
-        get_reg_sttings(hWnd);
         createContextMenu();
         create_trayicon(hWnd);
+        get_reg_sttings(hWnd);
 
     } break;
 
