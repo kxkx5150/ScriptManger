@@ -302,6 +302,10 @@ void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
     SetForegroundWindow(hWnd);
     ShowWindow(hWnd, SW_SHOWNORMAL);
     SetWindowPos(hWnd, NULL, p.x - main_window_width + ofx, p.y - main_window_height - 20 + ofy, 0, 0, SWP_NOSIZE);
+    UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
+    if (MFS_CHECKED != uState2) {
+        g_script_manager->set_focus_search_editor();
+    }
 }
 void send_args(HWND mainhwnd)
 {
@@ -313,6 +317,7 @@ void send_args(HWND mainhwnd)
     data_to_send.cbData = (DWORD)8191;
     data_to_send.lpData = buffer;
     SendMessage(mainhwnd, WM_COPYDATA, 0, (LPARAM)&data_to_send);
+    delete[] buffer;
 }
 void receive_args(HWND main_window_handle, LPARAM lparam)
 {
@@ -546,12 +551,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     } break;
 
-        //case WM_CLOSE: {
-        //    ShowWindow(hWnd, SW_HIDE);
-        //} break;
+    case WM_CLOSE: {
+        HMENU hmenu = GetMenu(hWnd);
+        UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+        if (uState) {
+            ShowWindow(hWnd, SW_HIDE);
+        } else {
+            DestroyWindow(hWnd);
+        }
+    } break;
 
     case WM_DESTROY: {
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
+        delete g_script_manager;
         PostQuitMessage(0);
     } break;
 

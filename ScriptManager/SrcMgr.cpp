@@ -20,6 +20,7 @@ SrcMgr::SrcMgr(HWND hWnd, HINSTANCE hInst)
 }
 SrcMgr::~SrcMgr()
 {
+    g_srcmgr->write_setting_csv();
     DeleteObject(m_hFont);
     DeleteObject(m_shFont);
     DeleteObject(m_sshFont);
@@ -29,6 +30,10 @@ SrcMgr::~SrcMgr()
         delete_command(i);
     }
     m_commands.clear();
+    RemoveWindowSubclass(m_combogrouphwnd, SubclassWindowProc, 0);
+    RemoveWindowSubclass(m_dropgrouphwnd, SubclassWindowProc, 0);
+    RemoveWindowSubclass(m_dd_listhwnd, SubclassWindowProc, 0);
+    RemoveWindowSubclass(m_addgrouphwnd, SubclassWindowProc, 0);
 }
 void SrcMgr::init()
 {
@@ -222,8 +227,6 @@ void SrcMgr::reset_script_value()
 void SrcMgr::set_ddlist_value(const TCHAR* args, const TCHAR* delim)
 {
     if (0 < _tcslen(args)) {
-        TCHAR* buftmp = new TCHAR[8191];
-        buftmp[0] = '\0';
         std::wstring s = std::wstring(args);
         std::wstring item;
         for (TCHAR ch : s) {
@@ -639,6 +642,8 @@ void SrcMgr::write_setting_csv()
     wcscpy_s(filename, MAX_PATH, L"settings.csv");
     wcscpy_s(buftmp, strlen, argstr.c_str());
     write_file(filename, buftmp);
+    delete[] filename;
+    delete[] buftmp;
 }
 void SrcMgr::read_setting_csv()
 {
@@ -684,6 +689,7 @@ void SrcMgr::read_setting_csv()
         command.windowopt = windowopt;
         add_script(command, -1);
     }
+    delete[] stradd;
 }
 
 int SrcMgr::write_file(TCHAR* filename, TCHAR* args, bool utf8)
@@ -1204,8 +1210,6 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     } break;
 
     case WM_NCDESTROY:
-        g_srcmgr->write_setting_csv();
-        RemoveWindowSubclass(hWnd, SubclassWindowProc, uIdSubclass);
         break;
     }
 
