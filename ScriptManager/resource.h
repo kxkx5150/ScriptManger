@@ -40,6 +40,10 @@
 #define IDC_SEARCHGROUP                 176
 #define SW_AUTOCLOSE                    177
 #define IDC_CLEAR_ARG_BUTTON            178
+#define IDC_SEARCH_EDIT					179
+#define IDC_SEARCH_LIST					180
+
+
 #define IDB_BITMAP1                     183
 #define IDD_DIALOGBAR                   186
 #define IDS_LISTBOX                     198

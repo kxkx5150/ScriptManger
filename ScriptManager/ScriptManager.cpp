@@ -286,7 +286,7 @@ void toggle_sys_tray(HWND hWnd, int menuid)
     } else {
         CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
         create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
-            L"systray",L"disable",
+            L"systray", L"disable",
             L"", false);
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
     }

@@ -17,6 +17,10 @@ struct Command {
 
 LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+LRESULT CALLBACK search_listproc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 class SrcMgr {
@@ -33,6 +37,8 @@ public:
     HWND m_stor_arg_chkboxhwnd = nullptr;
     HWND m_combohwnd = nullptr;
     HWND m_dd_listhwnd = nullptr;
+    HWND m_search_listhwnd = nullptr;
+    std::vector<Command> m_commands;
 
 private:
     HFONT m_hFont = nullptr;
@@ -69,10 +75,10 @@ private:
     HWND m_working_dirbtn = nullptr;
 
     HWND m_search_grouphwnd = nullptr;
+    HWND m_search_edithwnd = nullptr;
 
-    std::vector<Command> m_commands;
     int m_activeidx = -1;
-
+    std::vector<Command> m_search_commands;
     std::wstring m_commandline_args = L"";
 
 public:
@@ -87,7 +93,7 @@ public:
     void change_select_combobox();
 
     int get_ddlist_value(TCHAR* listtxt);
-    void exe_script(int exeidx = -1);
+    void exe_script(Command command);
     void delete_script(int exeidx = -1);
     void delete_command(int exeidx);
 
@@ -106,6 +112,10 @@ public:
     void click_up_arg();
     void click_down_arg();
 
+    int create_search_list_item(const TCHAR* str = L"");
+    int create_winapp_list_item();
+
+
     void add_arg_txt(HWND hDlg);
     void trim_tchar(TCHAR* pText);
     void replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::wstring rword);
@@ -116,6 +126,9 @@ public:
     int write_file(TCHAR* filename, TCHAR* args, bool utf8 = false);
     TCHAR* read_file(const TCHAR* filename);
     void exe_directory_path(TCHAR* path);
+    void input_search(HWND hWnd, TCHAR ch);
+    void set_focus_search_editor();
+    void exec_search_command(int idx);
 
 private:
     void set_font();
@@ -124,7 +137,7 @@ private:
     HWND create_group(HWND hParent, int nX, int nY, int nWidth, int nHeight, TCHAR* txt, int id = NULL);
     HWND create_combobox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id);
     HWND create_button(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
-    HWND create_dorp_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight);
+    HWND create_dorp_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id);
     HWND create_edittext(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     void create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight);
@@ -133,4 +146,6 @@ private:
 
     void select_combobox_item(int index);
     int get_combobox_index(TCHAR* itemstr);
+
+    void BuildList();
 };

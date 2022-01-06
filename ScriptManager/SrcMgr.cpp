@@ -2,6 +2,8 @@
 #include "Unicode.h"
 #include "resource.h"
 #include <CommCtrl.h>
+#include <algorithm>
+#include <crtdbg.h>
 #include <fstream>
 #include <iostream>
 #include <shlobj.h>
@@ -91,19 +93,8 @@ void SrcMgr::delete_script(int exeidx)
     delete_command(exeidx);
     reset_script_value();
 }
-void SrcMgr::exe_script(int exeidx)
+void SrcMgr::exe_script(Command command)
 {
-    auto comcount = m_commands.size();
-    if (comcount == 0)
-        return;
-    if (exeidx == -1)
-        exeidx = SendMessage(m_combohwnd, CB_GETCURSEL, 0, 0);
-    if (exeidx == -1)
-        return;
-
-    Command command = m_commands[exeidx];
-
-    int windowopt = m_commands[exeidx].windowopt;
     TCHAR* args = new TCHAR[8191];
     args[0] = '\0';
     wcscat_s(args, 8191, L"chcp 65001\r\n");
@@ -136,15 +127,15 @@ void SrcMgr::exe_script(int exeidx)
     }
 
     TCHAR bat[MAX_PATH] = L"";
-    if (windowopt == SW_SHOWNORMAL) {
+    if (command.windowopt == SW_SHOWNORMAL) {
         wcscat_s(bat, MAX_PATH, L"/K \"");
 
-    } else if (windowopt == SW_HIDE) {
+    } else if (command.windowopt == SW_HIDE) {
         wcscat_s(bat, MAX_PATH, L"/C \"");
 
     } else {
         wcscat_s(bat, MAX_PATH, L"/C \"");
-        windowopt = SW_SHOWNORMAL;
+        command.windowopt = SW_SHOWNORMAL;
     }
 
     TCHAR batpath[MAX_PATH] = L"exe.bat";
@@ -158,7 +149,7 @@ void SrcMgr::exe_script(int exeidx)
     wcscat_s(pdir, MAX_PATH, command.pydir);
     wcscat_s(pdir, MAX_PATH, L"\"");
 
-    ShellExecute(NULL, L"open", command.cmd, bat, pdir, windowopt);
+    ShellExecute(NULL, L"open", command.cmd, bat, pdir, command.windowopt);
     //m_commandline_args = L"";
     delete[] args;
     delete[] listtxt;
@@ -292,7 +283,6 @@ void SrcMgr::change_script_path()
         }
     }
 }
-
 void SrcMgr::create_control()
 {
     m_hFont = create_font(16);
@@ -308,7 +298,7 @@ void SrcMgr::create_control()
 
     m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L" Drop argument files ");
     m_dd_clearhwnd = create_button(m_dropgrouphwnd, 0, 0, 58, 17, IDC_CLEAR_ARG_BUTTON, (TCHAR*)L"Clear");
-    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 299, 96);
+    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 298, 96, IDS_LISTBOX);
     m_addarghwnd = create_button(m_dropgrouphwnd, 300, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
     m_delarghwnd = create_button(m_dropgrouphwnd, 300, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
     m_uparghwnd = create_button(m_dropgrouphwnd, 300, 58, 18, 22, IDC_UP_ARG_BUTTON, (TCHAR*)L"Å™");
@@ -342,6 +332,10 @@ void SrcMgr::create_control()
     m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
 
     m_search_grouphwnd = create_group(m_prnthwnd, 2, 2, 320, 190, (TCHAR*)L" Search ", IDC_SEARCHGROUP);
+    m_search_edithwnd = create_edittext(m_search_grouphwnd, 2, 18, 315, 21, IDC_SEARCH_EDIT, (TCHAR*)L"");
+    m_search_listhwnd = create_dorp_listbox(m_search_grouphwnd, 2, 46, 315, 145, IDC_SEARCH_LIST);
+    SetWindowSubclass(m_search_edithwnd, &search_proc, 0, 0);
+    SetWindowSubclass(m_search_listhwnd, &search_listproc, 0, 0);
     ShowWindow(m_search_grouphwnd, SW_HIDE);
 
     Edit_SetCueBannerText(m_name_edithwnd, L"Name");
@@ -349,6 +343,7 @@ void SrcMgr::create_control()
     Edit_SetCueBannerText(m_venv_pathhwnd, L"venv activate.bat path");
     Edit_SetCueBannerText(m_src_pathhwnd, L"Script path");
     Edit_SetCueBannerText(m_dir_pathhwnd, L"Working directory");
+    Edit_SetCueBannerText(m_search_edithwnd, L"Search");
 
     reset_script_value();
     change_select_combobox();
@@ -392,6 +387,8 @@ void SrcMgr::set_font()
     SendMessage(m_stor_arg_chkboxhwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
 
     SendMessage(m_search_grouphwnd, WM_SETFONT, (WPARAM)m_shFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_search_edithwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_search_listhwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
 
     SendMessage(m_addarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_delarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
@@ -412,13 +409,13 @@ HWND SrcMgr::create_button(HWND hParent, int nX, int nY, int nWidth, int nHeight
         nX, nY, nWidth, nHeight,
         hParent, (HMENU)id, m_hInst, NULL);
 }
-HWND SrcMgr::create_dorp_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight)
+HWND SrcMgr::create_dorp_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
 {
     return CreateWindow(
         L"LISTBOX", NULL,
-        WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_VSCROLL,
+        WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_VSCROLL | WS_BORDER,
         nX, nY, nWidth, nHeight,
-        hParent, (HMENU)IDS_LISTBOX, m_hInst, NULL);
+        hParent, (HMENU)id, m_hInst, NULL);
 }
 HWND SrcMgr::create_group(HWND hParent, int nX, int nY, int nWidth, int nHeight, TCHAR* txt, int id)
 {
@@ -613,7 +610,6 @@ void SrcMgr::click_down_arg()
     SendMessage(m_dd_listhwnd, LB_INSERTSTRING, exeidx, (LPARAM)tmptxt);
     SendMessage(m_dd_listhwnd, LB_SETCURSEL, exeidx + 1, 0);
 }
-
 void SrcMgr::write_setting_csv()
 {
     std::wstring argstr = L"";
@@ -902,6 +898,82 @@ void SrcMgr::replace_string(TCHAR* strbuf, int maxlen, std::wstring sword, std::
     }
     wcscpy_s(strbuf, maxlen, sstr.c_str());
 }
+int SrcMgr::create_search_list_item(const TCHAR* str)
+{
+    int itemcount = 0;
+    int strlen = _tcslen(str);
+    _RPTN(_CRT_WARN, "%d\n", strlen);
+    TCHAR sstr[MAX_PATH];
+    SendMessage(m_search_listhwnd, LB_RESETCONTENT, 0, 0);
+    m_search_commands.clear();
+
+    std::vector<Command> cmds;
+    copy(m_commands.begin(), m_commands.end(), back_inserter(cmds));
+    sort(cmds.begin(), cmds.end(),
+        [](const Command& a, const Command& b) {
+            std::wstring aa = a.name;
+            std::wstring bb = b.name;
+            BOOL tmp = FALSE;
+            if (aa < bb) {
+                tmp = TRUE;
+            }
+            return tmp;
+        });
+
+    if (strlen == 0) {
+        for (auto&& cmd : cmds) {
+            itemcount++;
+            m_search_commands.push_back(cmd);
+            SendMessage(m_search_listhwnd, LB_ADDSTRING, 0, (LPARAM)cmd.name);
+        }
+        SendMessage(m_search_listhwnd, LB_SETCURSEL, 0, 0);
+
+    } else {
+        for (auto&& cmd : cmds) {
+            std::wstring cstr = cmd.name;
+            int idx = cstr.find(str);
+            if (idx == 0) {
+                itemcount++;
+                m_search_commands.push_back(cmd);
+                SendMessage(m_search_listhwnd, LB_ADDSTRING, 0, (LPARAM)cmd.name);
+            }
+        }
+
+        if (itemcount > 0) {
+            SendMessage(m_search_listhwnd, LB_SETCURSEL, 0, 0);
+        }
+    }
+
+    return itemcount;
+}
+int SrcMgr::create_winapp_list_item()
+{
+    return 0;
+}
+
+void SrcMgr::input_search(HWND hWnd, TCHAR ch)
+{
+    if (VK_RETURN == ch) {
+        int idx = SendMessage(m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
+        exec_search_command(idx);
+
+    } else if (!_istcntrl(ch) || VK_BACK == ch) {
+        TCHAR editbuf[MAX_PATH] = { '\0' };
+        GetWindowText(hWnd, editbuf, MAX_PATH);
+        create_search_list_item(editbuf);
+    }
+}
+void SrcMgr::exec_search_command(int idx)
+{
+    if (idx < 0)
+        return;
+    Command command = m_search_commands[idx];
+    exe_script(command);
+}
+void SrcMgr::set_focus_search_editor()
+{
+    SetFocus(m_search_edithwnd);
+}
 void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
 {
     RECT rc;
@@ -924,6 +996,8 @@ void SrcMgr::resize_window(HWND hWnd, bool addmenu, int addarea)
         ShowWindow(m_search_grouphwnd, SW_SHOWNORMAL);
         SetWindowPos(m_dropgrouphwnd, HWND_TOP, 2, 194, 0, 0, SWP_NOSIZE);
         SetWindowPos(hWnd, HWND_TOP, 0, 0, cx, cy - addarea, SWP_NOMOVE);
+        create_search_list_item();
+        set_focus_search_editor();
     }
 }
 void SrcMgr::receive_args(int idx, const TCHAR* cmdline)
@@ -967,8 +1041,63 @@ INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
             break;
         }
     }
-
     return (INT_PTR)FALSE;
+}
+LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+    LRESULT ret = FALSE;
+    switch (uMsg) {
+    case WM_CHAR:
+        if (VK_RETURN != (TCHAR)wParam) {
+            ret = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+        g_srcmgr->input_search(hWnd, (TCHAR)wParam);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) {
+
+        case VK_UP: {
+            int idx = SendMessage(g_srcmgr->m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
+            if (idx > 0) {
+                SendMessage(g_srcmgr->m_search_listhwnd, LB_SETCURSEL, idx - 1, 0);
+            }
+        } break;
+
+        case VK_DOWN: {
+            int idx = SendMessage(g_srcmgr->m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
+            SendMessage(g_srcmgr->m_search_listhwnd, LB_SETCURSEL, idx + 1, 0);
+        } break;
+        }
+        break;
+
+    default:
+        ret = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+    }
+    return ret;
+}
+LRESULT CALLBACK search_listproc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+    switch (uMsg) {
+    case WM_CHAR:
+        if (VK_RETURN == (TCHAR)wParam) {
+            int idx = SendMessage(g_srcmgr->m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
+            g_srcmgr->exec_search_command(idx);
+        }
+        g_srcmgr->set_focus_search_editor();
+        break;
+
+    case WM_LBUTTONUP: {
+        int idx = SendMessage(g_srcmgr->m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
+        g_srcmgr->exec_search_command(idx);
+    } break;
+
+    default:
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+    }
+    return FALSE;
 }
 LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
@@ -1007,9 +1136,17 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
             }
             break;
 
-        case ID_EXE:
-            g_srcmgr->exe_script();
-            break;
+        case ID_EXE: {
+            auto comcount = g_srcmgr->m_commands.size();
+            if (comcount == 0)
+                break;
+            int exeidx = SendMessage(g_srcmgr->m_combohwnd, CB_GETCURSEL, 0, 0);
+            if (exeidx == -1)
+                break;
+
+            Command command = g_srcmgr->m_commands[exeidx];
+            g_srcmgr->exe_script(command);
+        } break;
 
         case ID_COMB_DELETE:
             g_srcmgr->delete_script();
@@ -1058,6 +1195,10 @@ LRESULT CALLBACK SubclassWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 
         case IDC_DOWN_ARG_BUTTON: {
             g_srcmgr->click_down_arg();
+        } break;
+
+        case IDC_SEARCH_LIST: {
+
         } break;
         }
     } break;
