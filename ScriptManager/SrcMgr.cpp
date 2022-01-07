@@ -159,6 +159,12 @@ void SrcMgr::exe_script(Command command)
     delete[] args;
     delete[] listtxt;
     delete[] pdir;
+
+    HMENU hmenu = GetMenu(m_prnthwnd);
+    UINT uState = GetMenuState(hmenu, ID_MENU_RUNMINIMIZED, MF_BYCOMMAND);
+    if (uState) {
+        SetTimer(m_prnthwnd, 1, 800, NULL);
+    }
 }
 
 void SrcMgr::set_script_value(int exeidx)
@@ -952,11 +958,11 @@ int SrcMgr::create_search_list_item(const TCHAR* str)
 
     return itemcount;
 }
-int SrcMgr::create_winapp_list_item()
+void SrcMgr::clear_search_editor()
 {
-    return 0;
+    SetWindowText(m_search_edithwnd, L"");
+    create_search_list_item();
 }
-
 void SrcMgr::input_search(HWND hWnd, TCHAR ch)
 {
     if (VK_RETURN == ch) {
