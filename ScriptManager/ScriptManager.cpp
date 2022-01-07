@@ -241,6 +241,8 @@ void setContextMenu(HWND hWnd)
         CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_UNCHECKED);
         delete_shellreg(L"SOFTWARE\\Classes\\*\\shell", L"Script_Manager_kxkx5150");
         delete_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150");
+        delete_shellreg(L"SOFTWARE\\Classes\\Directory\\Background\\shell", L"Script_Manager_kxkx5150");
+
     } else {
         CheckMenuItem(hmenu, ID_MENU_EXPLORERMENU, MF_BYCOMMAND | MFS_CHECKED);
         create_shellreg(L"SOFTWARE\\Classes\\*\\shell", L"Script_Manager_kxkx5150",
@@ -249,6 +251,9 @@ void setContextMenu(HWND hWnd)
         create_shellreg(L"SOFTWARE\\Classes\\Directory\\shell", L"Script_Manager_kxkx5150",
             L"", L"Open with Script Manager",
             L"\" \"%V\"");
+        create_shellreg(L"SOFTWARE\\Classes\\Directory\\Background\\shell", L"Script_Manager_kxkx5150",
+            L"", L"Open with Script Manager",
+            L"\"");
     }
 }
 void toggle_mode(HWND hWnd, int menuid)
@@ -291,17 +296,40 @@ void toggle_sys_tray(HWND hWnd, int menuid)
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
     }
 }
-void show_main_window(HWND hWnd, int ofx = 0, int ofy = 0)
+void toggle_run_minimize(HWND hWnd, int menuid)
 {
     HMENU hmenu = GetMenu(hWnd);
-    UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-    if (!uState)
-        return;
+    UINT uState = GetMenuState(hmenu, menuid, MF_BYCOMMAND);
+    if (!uState) {
+        CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_CHECKED);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"run_minimize", L"enable",
+            L"", false);
+    } else {
+        CheckMenuItem(hmenu, menuid, MF_BYCOMMAND | MFS_UNCHECKED);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"run_minimize", L"disable",
+            L"", false);
+    }
+}
+void show_main_window(HWND hWnd, bool tray = false)
+{
+    HMENU hmenu = GetMenu(hWnd);
+    //UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+    //if (!uState)
+    //    return;
     POINT p;
     GetCursorPos(&p);
     SetForegroundWindow(hWnd);
     ShowWindow(hWnd, SW_SHOWNORMAL);
-    SetWindowPos(hWnd, NULL, p.x - main_window_width + ofx, p.y - main_window_height - 20 + ofy, 0, 0, SWP_NOSIZE);
+    int offx = 0, offy = 0;
+    if (tray) {
+        offx = main_window_width;
+        offy = main_window_height + 30;
+    } else {
+        offy = 60;
+    }
+    SetWindowPos(hWnd, NULL, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
     UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
     if (MFS_CHECKED != uState2) {
         g_script_manager->set_focus_search_editor();
@@ -327,7 +355,7 @@ void receive_args(HWND main_window_handle, LPARAM lparam)
     LPCWSTR arguments = (LPCWSTR)copy_data_structure->lpData;
 
     if (copy_data_structure->dwData == uMessage) {
-        show_main_window(main_window_handle, 180, 480);
+        show_main_window(main_window_handle);
         g_script_manager->receive_args(1, arguments);
     }
 }
@@ -431,6 +459,11 @@ void get_reg_sttings(HWND hWnd)
     if (str == L"disable") {
         toggle_sys_tray(hWnd, ID_MENU_SYSTEMTRAY);
     }
+
+    str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"run_minimize");
+    if (str == L"disable") {
+        toggle_run_minimize(hWnd, ID_MENU_RUNMINIMIZED);
+    }
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -479,6 +512,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             toggle_sys_tray(hWnd, ID_MENU_SYSTEMTRAY);
         } break;
 
+        case ID_MENU_RUNMINIMIZED: {
+            toggle_run_minimize(hWnd, ID_MENU_RUNMINIMIZED);
+        } break;
+
         case ID_MENU_STARTUP: {
             setStartUp(hWnd);
         } break;
@@ -491,6 +528,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
     } break;
+
+    case WM_TIMER:
+        PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        KillTimer(hWnd, 1);
+        break;
 
     case WM_COPYDATA: {
         receive_args(hWnd, lParam);
@@ -505,17 +547,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_SIZE: {
         if (wParam == SIZE_MINIMIZED) {
+            g_script_manager->clear_search_editor();
             HMENU hmenu = GetMenu(hWnd);
             UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
             if (!uState)
                 return 0;
             ShowWindow(hWnd, SW_HIDE);
+        } else {
         }
     } break;
 
     case WM_TO_TRAY: {
         if (lParam == WM_LBUTTONDOWN) {
-            show_main_window(hWnd);
+            show_main_window(hWnd, true);
 
         } else if (lParam == WM_RBUTTONUP) {
             POINT p;
@@ -555,7 +599,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         HMENU hmenu = GetMenu(hWnd);
         UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
         if (uState) {
-            ShowWindow(hWnd, SW_HIDE);
+            //ShowWindow(hWnd, SW_HIDE);
+            PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+
         } else {
             DestroyWindow(hWnd);
         }

@@ -113,8 +113,7 @@ public:
     void click_down_arg();
 
     int create_search_list_item(const TCHAR* str = L"");
-    int create_winapp_list_item();
-
+    void clear_search_editor();
 
     void add_arg_txt(HWND hDlg);
     void trim_tchar(TCHAR* pText);
