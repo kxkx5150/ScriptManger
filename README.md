@@ -1,10 +1,12 @@
 # ScriptManger
 
-## Script Manger for Python Script
+<br>
+
+## Launcher for python script, windows app
 
 <br>
 
- ### python, python GUI, node.js, etc ...
+ #### python, python GUI, node.js, windows app, etc ...
 
 https://user-images.githubusercontent.com/10168979/148080657-a556d492-a1db-4f27-9d06-4742e877b520.mp4
 
