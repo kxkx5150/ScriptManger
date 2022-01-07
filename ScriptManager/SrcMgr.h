@@ -147,4 +147,8 @@ private:
     int get_combobox_index(TCHAR* itemstr);
 
     void BuildList();
+
+    bool check_toml(std::wstring dirstr, const TCHAR* vpath);
+    void check_venv(std::wstring dirstr, const TCHAR* vpath);
+
 };

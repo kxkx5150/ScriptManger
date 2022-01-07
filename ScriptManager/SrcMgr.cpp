@@ -104,6 +104,13 @@ void SrcMgr::exe_script(Command command)
     args[0] = '\0';
     wcscat_s(args, 8191, L"chcp 65001\r\n");
 
+    if (_tcslen(command.pydir) > 0) {
+        wcscat_s(args, 8191, L"cd");
+        wcscat_s(args, 8191, L" \"");
+        wcscat_s(args, 8191, command.pydir);
+        wcscat_s(args, 8191, L"\"\r\n");
+    }
+
     if (_tcslen(command.batpath) > 0) {
         wcscat_s(args, 8191, L"call");
         wcscat_s(args, 8191, L" \"");
@@ -793,17 +800,43 @@ void SrcMgr::open_file_dialog(HWND hwnd, HWND pathhwnd, const TCHAR* filtertxt)
             GetWindowText(pathhwnd, srcpathbuf, MAX_PATH);
             std::wstring dirstr = srcpathbuf;
             dirstr = dirstr.substr(0, dirstr.find_last_of(L"/\\"));
-            SetWindowText(g_srcmgr->m_dir_pathhwnd, dirstr.c_str());
 
-            std::wstring vevnstr = L"\\venv\\Scripts\\activate.bat";
-            vevnstr = dirstr + vevnstr;
-            DWORD dwAttrib = GetFileAttributes(vevnstr.c_str());
-            if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
-                SetWindowText(g_srcmgr->m_venv_pathhwnd, vevnstr.c_str());
-                SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
-                change_venv_checkbox();
+            if (check_toml(dirstr, L"\\..\\pyproject.toml")) {
+                std::wstring tomldirstr = dirstr.substr(0, dirstr.find_last_of(L"/\\"));
+                SetWindowText(m_cmd_edithwnd, L"poetry run python ");
+                SetWindowText(m_dir_pathhwnd, tomldirstr.c_str());
+
+            } else {
+                SetWindowText(m_dir_pathhwnd, dirstr.c_str());
+                check_venv(dirstr, L"\\.venv\\Scripts\\activate.bat");
+                check_venv(dirstr, L"\\venv\\Scripts\\activate.bat");
+                check_venv(dirstr, L"\\..\\.venv\\Scripts\\activate.bat");
             }
         }
+    }
+}
+bool SrcMgr::check_toml(std::wstring dirstr, const TCHAR* vpath)
+{
+    std::wstring vevnstr = vpath;
+    vevnstr = dirstr + vevnstr;
+    DWORD dwAttrib = GetFileAttributes(vevnstr.c_str());
+
+    if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+        return true;
+    }
+    return false;
+}
+void SrcMgr::check_venv(std::wstring dirstr, const TCHAR* vpath)
+{
+    std::wstring vevnstr = vpath;
+    vevnstr = dirstr + vevnstr;
+    DWORD dwAttrib = GetFileAttributes(vevnstr.c_str());
+    SetWindowText(g_srcmgr->m_dir_pathhwnd, dirstr.c_str());
+
+    if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+        SetWindowText(g_srcmgr->m_venv_pathhwnd, vevnstr.c_str());
+        SendMessage(m_venv_chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+        change_venv_checkbox();
     }
 }
 void SrcMgr::open_directory_dialog(HWND hwnd, HWND dirhwnd)
