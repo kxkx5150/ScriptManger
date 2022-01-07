@@ -1002,6 +1002,9 @@ void SrcMgr::input_search(HWND hWnd, TCHAR ch)
         int idx = SendMessage(m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
         exec_search_command(idx);
 
+    } else if (VK_ESCAPE == ch) {
+        PostMessage(m_prnthwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+
     } else if (!_istcntrl(ch) || VK_BACK == ch) {
         TCHAR editbuf[MAX_PATH] = { '\0' };
         GetWindowText(hWnd, editbuf, MAX_PATH);
@@ -1094,7 +1097,7 @@ LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
     LRESULT ret = FALSE;
     switch (uMsg) {
     case WM_CHAR:
-        if (VK_RETURN != (TCHAR)wParam) {
+        if (VK_RETURN != (TCHAR)wParam && VK_ESCAPE != (TCHAR)wParam) {
             ret = DefSubclassProc(hWnd, uMsg, wParam, lParam);
         }
         g_srcmgr->input_search(hWnd, (TCHAR)wParam);
