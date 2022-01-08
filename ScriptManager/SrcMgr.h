@@ -22,6 +22,8 @@ LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
 LRESULT CALLBACK search_listproc(HWND hWnd, UINT uMsg, WPARAM wParam,
     LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 INT_PTR CALLBACK add_arg_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 class SrcMgr {
 public:
@@ -150,5 +152,4 @@ private:
 
     bool check_toml(std::wstring dirstr, const TCHAR* vpath);
     void check_venv(std::wstring dirstr, const TCHAR* vpath);
-
 };

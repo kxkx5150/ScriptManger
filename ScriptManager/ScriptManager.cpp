@@ -8,6 +8,18 @@ HMENU hPopMenu;
 int main_window_width = 340;
 int main_window_height = 544;
 int add_group_height = 176;
+struct KeyObj {
+    bool alt;
+    bool ctrl;
+    bool shift;
+    TCHAR keycode;
+};
+KeyObj keyobj = {
+    false,
+    false,
+    false,
+    0
+};
 
 UINT uMessage = RegisterWindowMessage(L"script_mgr_kxkx5150__japan_kyoto");
 #define MAX_LOADSTRING 100
@@ -15,7 +27,8 @@ HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
 SrcMgr* g_script_manager = nullptr;
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+HHOOK hHook { NULL };
+HWND g_mainhwnd = nullptr;
 
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -382,6 +395,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RUNPYTHON));
     MSG msg;
+    hHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0);
 
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
@@ -389,7 +403,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             DispatchMessage(&msg);
         }
     }
-
+    UnhookWindowsHookEx(hHook);
     return (int)msg.wParam;
 }
 void create_trayicon(HWND hWnd)
@@ -465,6 +479,105 @@ void get_reg_sttings(HWND hWnd)
         toggle_run_minimize(hWnd, ID_MENU_RUNMINIMIZED);
     }
 }
+HWND create_combobox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
+{
+    return CreateWindow(
+        L"COMBOBOX", L"",
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL | WS_CLIPSIBLINGS | WS_VSCROLL,
+        nX, nY, nWidth, nHeight,
+        hParent, (HMENU)id, hInst, NULL);
+}
+HWND create_button(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt)
+{
+    return CreateWindow(
+        L"BUTTON", txt,
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        nX, nY, nWidth, nHeight,
+        hParent, (HMENU)id, hInst, NULL);
+}
+void create_shotcut_control(HWND hDlg)
+{
+    HWND keylisthwnd = CreateWindow(
+        L"COMBOBOX", NULL,
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_CLIPSIBLINGS | WS_VSCROLL,
+        32, 10, 150, 20,
+        hDlg, (HMENU)IDD_SHORTCUT_KEY_LISTBOX, hInst, NULL);
+    TCHAR i;
+    for (i = L'z'; L'a' <= i; i--) {
+        std::wstring aaa = &i;
+        aaa[1] = L'\0';
+        SendMessage(keylisthwnd, CB_INSERTSTRING, 0, (LPARAM)aaa.c_str());
+    }
+    SendMessage(keylisthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
+    SendMessage(keylisthwnd, CB_SETCURSEL, 0, 0);
+
+    HWND ctrlhwnd = create_combobox(hDlg, 32, 45, 150, 20, IDD_SHORTCUT_CTRL_LISTBOX);
+    SendMessage(ctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
+    SendMessage(ctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
+    SendMessage(ctrlhwnd, CB_SETCURSEL, 0, 0);
+
+    HWND althwnd = create_combobox(hDlg, 32, 80, 150, 20, IDD_SHORTCUT_ALT_LISTBOX);
+    SendMessage(althwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
+    SendMessage(althwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
+    SendMessage(althwnd, CB_SETCURSEL, 0, 0);
+
+    HWND shifthwnd = create_combobox(hDlg, 32, 115, 150, 20, IDD_SHORTCUT_SHIFT_LISTBOX);
+    SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"SHIFT");
+    SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
+    SendMessage(shifthwnd, CB_SETCURSEL, 0, 0);
+
+    create_button(hDlg, 18, 170, 90, 26, IDD_SHORTCUT_OKBUTTON, (TCHAR*)L"OK");
+    create_button(hDlg, 110, 170, 90, 26, IDD_SHORTCUT_CANCELBUTTON, (TCHAR*)L"Cancel");
+}
+void toggle_shortcut()
+{
+    bool miniwin = IsIconic(g_mainhwnd);
+    if (miniwin) {
+        show_main_window(g_mainhwnd);
+    } else {
+        PostMessage(g_mainhwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+    }
+}
+void ok_shotcut(HWND hDlg)
+{
+    HWND keylisthwnd = GetDlgItem(hDlg, IDD_SHORTCUT_KEY_LISTBOX);
+    HWND ctrlhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_CTRL_LISTBOX);
+    HWND althwnd = GetDlgItem(hDlg, IDD_SHORTCUT_ALT_LISTBOX);
+    HWND shifthwnd = GetDlgItem(hDlg, IDD_SHORTCUT_SHIFT_LISTBOX);
+
+    TCHAR keytxt[10];
+    GetWindowText(keylisthwnd, keytxt, 10);
+    TCHAR ctrltxt[10];
+    GetWindowText(ctrlhwnd, ctrltxt, 10);
+    TCHAR alttxt[10];
+    GetWindowText(althwnd, alttxt, 10);
+    TCHAR shifttxt[10];
+    GetWindowText(shifthwnd, shifttxt, 10);
+
+    if (keytxt == L"") {
+        keyobj.keycode = 0;
+    } else {
+        keyobj.keycode = *keytxt;
+    }
+
+    if (_tcslen(ctrltxt) == 0) {
+        keyobj.ctrl = false;
+    } else {
+        keyobj.ctrl = true;
+    }
+
+    if (_tcslen(alttxt) == 0) {
+        keyobj.alt = false;
+    } else {
+        keyobj.alt = true;
+    }
+
+    if (_tcslen(shifttxt) == 0) {
+        keyobj.shift = false;
+    } else {
+        keyobj.shift = true;
+    }
+}
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -480,6 +593,50 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
+}
+INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message) {
+    case WM_INITDIALOG: {
+        create_shotcut_control(hDlg);
+        return (INT_PTR)TRUE;
+    }
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDD_SHORTCUT_OKBUTTON) {
+            ok_shotcut(hDlg);
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+
+        } else if (LOWORD(wParam) == IDD_SHORTCUT_CANCELBUTTON) {
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+        break;
+    }
+    return (INT_PTR)FALSE;
+}
+
+LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    if (wParam == WM_KEYDOWN) {
+        bool ctrl = GetKeyState(VK_CONTROL) < 0 ? true : false;
+        bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
+        bool alt = GetKeyState(VK_MENU) < 0 ? true : false;
+
+        if (keyobj.keycode != 0) {
+            if (keyobj.alt == alt && keyobj.ctrl == ctrl && keyobj.shift == shift) {
+                KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+                UINT keycode = keyobj.keycode - 32;
+                if (pK->vkCode == keycode) {
+                    toggle_shortcut();
+                    return TRUE;
+                }
+            }
+        }
+    }
+
+    return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -522,6 +679,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case ID_MENU_EXPLORERMENU: {
             setContextMenu(hWnd);
+        } break;
+
+        case ID_MENU_SHORTCUTKEY: {
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_DIALOG1), hWnd, shortcut_dialog_proc);
+
         } break;
 
         default:
@@ -583,7 +745,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return (LRESULT)hBrushColor;
     } break;
 
+    case WM_CHAR:
+        if (VK_ESCAPE == (TCHAR)wParam) {
+            PostMessage(g_mainhwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        }
+        break;
+
     case WM_CREATE: {
+        g_mainhwnd = hWnd;
         g_script_manager = new SrcMgr(hWnd, hInst);
         g_script_manager->init();
         g_script_manager->read_setting_csv();
@@ -596,15 +765,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_CLOSE: {
-        HMENU hmenu = GetMenu(hWnd);
-        UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-        if (uState) {
-            //ShowWindow(hWnd, SW_HIDE);
-            PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        //HMENU hmenu = GetMenu(hWnd);
+        //UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+        //if (uState) {
+        //    //ShowWindow(hWnd, SW_HIDE);
+        //    PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 
-        } else {
-            DestroyWindow(hWnd);
-        }
+        //} else {
+        //    DestroyWindow(hWnd);
+        //}
+        DestroyWindow(hWnd);
+
     } break;
 
     case WM_DESTROY: {

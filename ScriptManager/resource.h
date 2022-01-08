@@ -22,6 +22,7 @@
 #define IDC_HIDECMD                     137
 #define IDC_AUTOCLOSECMD                139
 #define IDI_ICON2                       140
+#define IDD_DIALOG1                     141
 #define IDC_VENV_BUTTON                 150
 #define IDC_SRC_BUTTON                  151
 #define IDC_DIR_BUTTON                  152
@@ -44,10 +45,20 @@
 #define IDC_SEARCH_LIST                 180
 #define IDB_BITMAP1                     183
 #define IDD_DIALOGBAR                   186
+
+#define IDD_SHORTCUT_KEY_LISTBOX		187
+#define IDD_SHORTCUT_CTRL_LISTBOX		188
+#define IDD_SHORTCUT_ALT_LISTBOX		189
+#define IDD_SHORTCUT_SHIFT_LISTBOX		190
+#define IDD_SHORTCUT_OKBUTTON			191
+#define IDD_SHORTCUT_CANCELBUTTON		192
+
 #define IDS_LISTBOX                     198
 #define IDC_EDIT1                       1001
 #define IDC_ARG_OK_BUTTON               1002
+#define IDC_LIST1                       1003
 #define IDC_ARG_CANCEL_BUTTON           1004
+#define IDC_LIST2                       1004
 #define WM_TO_TRAY                      1005
 #define IDC_RMENU_TERMINAL              1009
 #define IDC_RMENU_TERMINAL_AS           1010
@@ -65,6 +76,7 @@
 #define ID_MENU_EXPLORERMENU            32779
 #define ID_Menu                         32780
 #define ID_MENU_RUNMINIMIZED            32781
+#define ID_MENU_SHORTCUTKEY             32782
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -72,9 +84,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        141
-#define _APS_NEXT_COMMAND_VALUE         32782
-#define _APS_NEXT_CONTROL_VALUE         1003
+#define _APS_NEXT_RESOURCE_VALUE        142
+#define _APS_NEXT_COMMAND_VALUE         32783
+#define _APS_NEXT_CONTROL_VALUE         1005
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
