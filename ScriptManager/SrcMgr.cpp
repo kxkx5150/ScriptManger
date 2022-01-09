@@ -521,7 +521,7 @@ void SrcMgr::click_add_script(int index)
     GetWindowText(m_cmd_edithwnd, exebuf, MAX_PATH);
     trim_tchar(exebuf);
     if (_tcslen(exebuf) == 0) {
-        wcscpy_s(exebuf, _countof(exebuf), L"python.exe");
+        //wcscpy_s(exebuf, _countof(exebuf), L"python.exe");
     }
 
     TCHAR* scriptname = new TCHAR[MAX_PATH];
@@ -1102,6 +1102,12 @@ LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
         }
         g_srcmgr->input_search(hWnd, (TCHAR)wParam);
         break;
+
+    //case WM_KILLFOCUS: {
+    //    SetActiveWindow(g_srcmgr->m_prnthwnd);
+
+
+    //} break;
 
     case WM_KEYDOWN:
         switch (wParam) {

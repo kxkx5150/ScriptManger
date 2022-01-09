@@ -325,16 +325,26 @@ void toggle_run_minimize(HWND hWnd, int menuid)
             L"", false);
     }
 }
+void SetAbsoluteForegroundWindow(HWND hWnd)
+{
+    int nTargetID, nForegroundID;
+    DWORD sp_time;
+    nForegroundID = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+    nTargetID = GetWindowThreadProcessId(hWnd, NULL);
+    AttachThreadInput(nTargetID, nForegroundID, TRUE);
+    SystemParametersInfo(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &sp_time, 0);
+    SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, (LPVOID)0, 0);
+    BringWindowToTop(hWnd);
+    SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, &sp_time, 0);
+    AttachThreadInput(nTargetID, nForegroundID, FALSE);
+}
 void show_main_window(HWND hWnd, bool tray = false)
 {
     HMENU hmenu = GetMenu(hWnd);
-    //UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-    //if (!uState)
-    //    return;
     POINT p;
     GetCursorPos(&p);
-    SetForegroundWindow(hWnd);
     ShowWindow(hWnd, SW_SHOWNORMAL);
+    //BringWindowToTop(hWnd);
     int offx = 0, offy = 0;
     if (tray) {
         offx = main_window_width;
@@ -342,12 +352,13 @@ void show_main_window(HWND hWnd, bool tray = false)
     } else {
         offy = 60;
     }
-    SetWindowPos(hWnd, HWND_TOPMOST, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
-    SetFocus(hWnd);
+    SetWindowPos(hWnd, HWND_TOP, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
+    //SetFocus(hWnd);
     UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
     if (MFS_CHECKED != uState2) {
         g_script_manager->set_focus_search_editor();
     }
+    SetAbsoluteForegroundWindow(hWnd);
 }
 void send_args(HWND mainhwnd)
 {
@@ -572,7 +583,8 @@ void toggle_shortcut()
 {
     bool miniwin = IsIconic(g_mainhwnd);
     if (miniwin) {
-        show_main_window(g_mainhwnd);
+        SetTimer(g_mainhwnd, 10, 100, NULL);
+
     } else {
         PostMessage(g_mainhwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
     }
@@ -758,8 +770,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_TIMER:
-        PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
-        KillTimer(hWnd, 1);
+        if (wParam == 1) {
+            PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        } else if (wParam == 10) {
+            show_main_window(hWnd);
+        }
+        KillTimer(hWnd, wParam);
+
         break;
 
     case WM_COPYDATA: {
@@ -816,6 +833,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             PostMessage(g_mainhwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
         }
         break;
+
+    case WM_ACTIVATE: {
+        //if (wParam == WA_INACTIVE) {
+        //    SetActiveWindow(hWnd);
+        //}
+        //SetFocus(hWnd);
+        //HMENU hmenu = GetMenu(hWnd);
+        //UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
+        //if (MFS_CHECKED != uState2) {
+        //    g_script_manager->set_focus_search_editor();
+        //}
+
+    } break;
 
     case WM_CREATE: {
         g_mainhwnd = hWnd;
