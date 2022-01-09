@@ -395,7 +395,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RUNPYTHON));
     MSG msg;
-    hHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0);
 
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
@@ -403,7 +402,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             DispatchMessage(&msg);
         }
     }
-    UnhookWindowsHookEx(hHook);
     return (int)msg.wParam;
 }
 void create_trayicon(HWND hWnd)
@@ -478,6 +476,28 @@ void get_reg_sttings(HWND hWnd)
     if (str == L"disable") {
         toggle_run_minimize(hWnd, ID_MENU_RUNMINIMIZED);
     }
+
+    str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"shortcut");
+    if (str != L"empty") {
+        int sval = std::stoi(str);
+        if (sval >= 1000) {
+            UINT keycode = sval / 1000;
+            sval -= keycode * 1000;
+            keyobj.keycode = keycode;
+            if (sval >= 100) {
+                keyobj.ctrl = true;
+                sval -= 100;
+            }
+            if (sval >= 10) {
+                keyobj.alt = true;
+                sval -= 10;
+            }
+            if (sval >= 1) {
+                keyobj.shift = true;
+            }
+            OutputDebugString(L"");
+        }
+    }
 }
 HWND create_combobox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
 {
@@ -503,28 +523,46 @@ void create_shotcut_control(HWND hDlg)
         32, 10, 150, 20,
         hDlg, (HMENU)IDD_SHORTCUT_KEY_LISTBOX, hInst, NULL);
     TCHAR i;
+    int selidx = 0;
     for (i = L'z'; L'a' <= i; i--) {
         std::wstring aaa = &i;
         aaa[1] = L'\0';
         SendMessage(keylisthwnd, CB_INSERTSTRING, 0, (LPARAM)aaa.c_str());
+        if (i == keyobj.keycode) {
+            selidx = i - 96;
+        }
     }
     SendMessage(keylisthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
-    SendMessage(keylisthwnd, CB_SETCURSEL, 0, 0);
+    SendMessage(keylisthwnd, CB_SETCURSEL, selidx, 0);
 
     HWND ctrlhwnd = create_combobox(hDlg, 32, 45, 150, 20, IDD_SHORTCUT_CTRL_LISTBOX);
     SendMessage(ctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
     SendMessage(ctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
-    SendMessage(ctrlhwnd, CB_SETCURSEL, 0, 0);
+    if (keyobj.ctrl) {
+        SendMessage(ctrlhwnd, CB_SETCURSEL, 1, 0);
+    } else {
+        SendMessage(ctrlhwnd, CB_SETCURSEL, 0, 0);
+    }
 
     HWND althwnd = create_combobox(hDlg, 32, 80, 150, 20, IDD_SHORTCUT_ALT_LISTBOX);
     SendMessage(althwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
     SendMessage(althwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     SendMessage(althwnd, CB_SETCURSEL, 0, 0);
+    if (keyobj.alt) {
+        SendMessage(althwnd, CB_SETCURSEL, 1, 0);
+    } else {
+        SendMessage(althwnd, CB_SETCURSEL, 0, 0);
+    }
 
     HWND shifthwnd = create_combobox(hDlg, 32, 115, 150, 20, IDD_SHORTCUT_SHIFT_LISTBOX);
     SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"SHIFT");
     SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     SendMessage(shifthwnd, CB_SETCURSEL, 0, 0);
+    if (keyobj.shift) {
+        SendMessage(shifthwnd, CB_SETCURSEL, 1, 0);
+    } else {
+        SendMessage(shifthwnd, CB_SETCURSEL, 0, 0);
+    }
 
     create_button(hDlg, 18, 170, 90, 26, IDD_SHORTCUT_OKBUTTON, (TCHAR*)L"OK");
     create_button(hDlg, 110, 170, 90, 26, IDD_SHORTCUT_CANCELBUTTON, (TCHAR*)L"Cancel");
@@ -554,29 +592,40 @@ void ok_shotcut(HWND hDlg)
     TCHAR shifttxt[10];
     GetWindowText(shifthwnd, shifttxt, 10);
 
+    int regval = 0;
     if (keytxt == L"") {
         keyobj.keycode = 0;
     } else {
         keyobj.keycode = *keytxt;
+        UINT keycode = keyobj.keycode;
+        regval = 1000 * keycode;
     }
 
     if (_tcslen(ctrltxt) == 0) {
         keyobj.ctrl = false;
     } else {
         keyobj.ctrl = true;
+        regval += 100;
     }
 
     if (_tcslen(alttxt) == 0) {
         keyobj.alt = false;
     } else {
         keyobj.alt = true;
+        regval += 10;
     }
 
     if (_tcslen(shifttxt) == 0) {
         keyobj.shift = false;
     } else {
         keyobj.shift = true;
+        regval += 1;
     }
+
+    std::wstring regstr = std::to_wstring(regval);
+    create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+        L"shortcut", regstr.c_str(),
+        L"", false);
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -602,6 +651,7 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
         create_shotcut_control(hDlg);
         return (INT_PTR)TRUE;
     }
+
     case WM_COMMAND:
         if (LOWORD(wParam) == IDD_SHORTCUT_OKBUTTON) {
             ok_shotcut(hDlg);
@@ -611,6 +661,21 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
         } else if (LOWORD(wParam) == IDD_SHORTCUT_CANCELBUTTON) {
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
+        } else if (LOWORD(wParam) == IDD_SHORTCUT_ALT_LISTBOX) {
+            int wmEvent = HIWORD(wParam);
+            if (wmEvent == LBN_SELCHANGE) {
+                HWND ctrlhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_CTRL_LISTBOX);
+                HWND althwnd = GetDlgItem(hDlg, IDD_SHORTCUT_ALT_LISTBOX);
+
+                int altidx = SendMessage(althwnd, CB_GETCURSEL, 0, 0);
+                if (altidx == 0)
+                    break;
+
+                int idx = SendMessage(ctrlhwnd, CB_GETCURSEL, 0, 0);
+                if (idx == 0) {
+                    SendMessage(ctrlhwnd, CB_SETCURSEL, 1, 0);
+                }
+            }
         }
         break;
     }
@@ -620,17 +685,17 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (wParam == WM_KEYDOWN) {
-        bool ctrl = GetKeyState(VK_CONTROL) < 0 ? true : false;
-        bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
-        bool alt = GetKeyState(VK_MENU) < 0 ? true : false;
-
-        if (keyobj.keycode != 0) {
-            if (keyobj.alt == alt && keyobj.ctrl == ctrl && keyobj.shift == shift) {
-                KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
-                UINT keycode = keyobj.keycode - 32;
-                if (pK->vkCode == keycode) {
-                    toggle_shortcut();
-                    return TRUE;
+        KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+        if (pK->vkCode == keyobj.keycode - 32) {
+            bool ctrl = GetKeyState(VK_CONTROL) < 0 ? true : false;
+            if (keyobj.ctrl == ctrl) {
+                bool alt = GetKeyState(VK_MENU) < 0 ? true : false;
+                if (keyobj.alt == alt) {
+                    bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
+                    if (keyobj.shift == shift) {
+                        toggle_shortcut();
+                        return TRUE;
+                    }
                 }
             }
         }
@@ -761,6 +826,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         createContextMenu();
         create_trayicon(hWnd);
         get_reg_sttings(hWnd);
+        hHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0);
 
     } break;
 
@@ -781,6 +847,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY: {
         Shell_NotifyIcon(NIM_DELETE, &g_nid);
         delete g_script_manager;
+        UnhookWindowsHookEx(hHook);
         PostQuitMessage(0);
     } break;
 
