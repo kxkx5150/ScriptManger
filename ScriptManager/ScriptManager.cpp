@@ -344,7 +344,6 @@ void show_main_window(HWND hWnd, bool tray = false)
     POINT p;
     GetCursorPos(&p);
     ShowWindow(hWnd, SW_SHOWNORMAL);
-    //BringWindowToTop(hWnd);
     int offx = 0, offy = 0;
     if (tray) {
         offx = main_window_width;
@@ -353,12 +352,11 @@ void show_main_window(HWND hWnd, bool tray = false)
         offy = 60;
     }
     SetWindowPos(hWnd, HWND_TOP, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
-    //SetFocus(hWnd);
+    SetAbsoluteForegroundWindow(hWnd);
     UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
     if (MFS_CHECKED != uState2) {
         g_script_manager->set_focus_search_editor();
     }
-    SetAbsoluteForegroundWindow(hWnd);
 }
 void send_args(HWND mainhwnd)
 {
