@@ -343,6 +343,7 @@ void show_main_window(HWND hWnd, bool tray = false)
         offy = 60;
     }
     SetWindowPos(hWnd, NULL, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
+    SetFocus(hWnd);
     UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
     if (MFS_CHECKED != uState2) {
         g_script_manager->set_focus_search_editor();
@@ -831,17 +832,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_CLOSE: {
-        //HMENU hmenu = GetMenu(hWnd);
-        //UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
-        //if (uState) {
-        //    //ShowWindow(hWnd, SW_HIDE);
-        //    PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
-
-        //} else {
-        //    DestroyWindow(hWnd);
-        //}
-        DestroyWindow(hWnd);
-
+        HMENU hmenu = GetMenu(hWnd);
+        UINT uState = GetMenuState(hmenu, ID_MENU_SYSTEMTRAY, MF_BYCOMMAND);
+        if (uState) {
+            PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        } else {
+            DestroyWindow(hWnd);
+        }
     } break;
 
     case WM_DESTROY: {
