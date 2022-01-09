@@ -832,19 +832,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
 
-    case WM_ACTIVATE: {
-        //if (wParam == WA_INACTIVE) {
-        //    SetActiveWindow(hWnd);
-        //}
-        //SetFocus(hWnd);
-        //HMENU hmenu = GetMenu(hWnd);
-        //UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
-        //if (MFS_CHECKED != uState2) {
-        //    g_script_manager->set_focus_search_editor();
-        //}
-
-    } break;
-
     case WM_CREATE: {
         g_mainhwnd = hWnd;
         g_script_manager = new SrcMgr(hWnd, hInst);
