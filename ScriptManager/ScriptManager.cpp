@@ -569,12 +569,12 @@ void create_shotcut_control(HWND hDlg)
 
     HWND twgrouphwnd = create_group(hDlg, 5, 45, 206, 158, (TCHAR*)L"", IDD_SHORTCUT_TWGROUP);
     HWND twctrlhwnd = create_combobox(twgrouphwnd, 28, 20, 150, 20, IDD_SHORTCUT_TWCTRL);
-    SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
+    //SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
     SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
     if (g_twice_key == L"ctrl")
         SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
     else
-        SendMessage(twctrlhwnd, CB_SETCURSEL, 1, 0);
+        SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
 
     HWND cmbgrouphwnd = create_group(hDlg, 5, 45, 206, 158, (TCHAR*)L"", IDD_SHORTCUT_CMBGROUP);
     HWND keylisthwnd = CreateWindow(
@@ -790,24 +790,61 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
     }
     return (INT_PTR)FALSE;
 }
-
+bool g_twice_flg = false;
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (wParam == WM_KEYDOWN) {
-        KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
-        if (pK->vkCode == keyobj.keycode - 32) {
-            bool ctrl = GetKeyState(VK_CONTROL) < 0 ? true : false;
-            if (keyobj.ctrl == ctrl) {
+        if (g_twice_key == L"") {
+            g_twice_flg = false;
+            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+            if (pK->vkCode == keyobj.keycode - 32) {
+                bool ctrl = GetKeyState(VK_CONTROL) < 0 ? true : false;
+                if (keyobj.ctrl == ctrl) {
+                    bool alt = GetKeyState(VK_MENU) < 0 ? true : false;
+                    if (keyobj.alt == alt) {
+                        bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
+                        if (keyobj.shift == shift) {
+                            toggle_shortcut();
+                            return TRUE;
+                        }
+                    }
+                }
+            }
+        } else if (g_twice_key == L"alt") {
+            g_twice_flg = false;
+        } else {
+            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+            if (pK->vkCode != VK_LCONTROL && pK->vkCode != VK_RCONTROL) {
+                g_twice_flg = false;
+            }
+        }
+    } else if (wParam == WM_KEYUP) {
+        if (g_twice_key == L"ctrl") {
+            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+
+            if (pK->vkCode != VK_LCONTROL && pK->vkCode != VK_RCONTROL) {
+                g_twice_flg = false;
+            } else {
                 bool alt = GetKeyState(VK_MENU) < 0 ? true : false;
-                if (keyobj.alt == alt) {
-                    bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
-                    if (keyobj.shift == shift) {
+                bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
+                if (alt || shift) {
+                    g_twice_flg = false;
+                } else {
+                    if (!g_twice_flg) {
+                        g_twice_flg = true;
+                        SetTimer(g_mainhwnd, 100, 500, NULL);
+                    } else {
                         toggle_shortcut();
                         return TRUE;
                     }
                 }
             }
+        } else {
+            g_twice_flg = false;
         }
+
+    } else if (wParam == WM_SYSKEYDOWN) {
+        g_twice_flg = false;
     }
 
     return CallNextHookEx(hHook, nCode, wParam, lParam);
@@ -870,6 +907,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             PostMessage(hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
         } else if (wParam == 10) {
             show_main_window(hWnd);
+        } else if (wParam == 100) {
+            g_twice_flg = false;
         }
         KillTimer(hWnd, wParam);
 
