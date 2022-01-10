@@ -351,7 +351,7 @@ void show_main_window(HWND hWnd, bool tray = false)
     } else {
         offy = 60;
     }
-    SetWindowPos(hWnd, HWND_TOP, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
+    SetWindowPos(hWnd, HWND_TOPMOST, p.x - offx, p.y - offy, 0, 0, SWP_NOSIZE);
     SetAbsoluteForegroundWindow(hWnd);
     UINT uState2 = GetMenuState(hmenu, ID_SCRIPT_ADD, MF_BYCOMMAND);
     if (MFS_CHECKED != uState2) {
