@@ -8,6 +8,8 @@ HMENU hPopMenu;
 int main_window_width = 340;
 int main_window_height = 544;
 int add_group_height = 176;
+std::wstring g_twice_key = L"";
+
 struct KeyObj {
     bool alt;
     bool ctrl;
@@ -508,12 +510,30 @@ void get_reg_sttings(HWND hWnd)
             OutputDebugString(L"");
         }
     }
+
+    str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"twice");
+    if (str == L"enable") {
+        str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"twice_key");
+        if (str == L"ctrl") {
+            g_twice_key = L"ctrl";
+        } else {
+            g_twice_key = L"alt";
+        }
+    }
 }
 HWND create_combobox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
 {
     return CreateWindow(
         L"COMBOBOX", L"",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL | WS_CLIPSIBLINGS | WS_VSCROLL,
+        nX, nY, nWidth, nHeight,
+        hParent, (HMENU)id, hInst, NULL);
+}
+HWND create_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
+{
+    return CreateWindow(
+        L"LISTBOX", NULL,
+        WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_VSCROLL | WS_BORDER,
         nX, nY, nWidth, nHeight,
         hParent, (HMENU)id, hInst, NULL);
 }
@@ -525,13 +545,43 @@ HWND create_button(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id
         nX, nY, nWidth, nHeight,
         hParent, (HMENU)id, hInst, NULL);
 }
+HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, const TCHAR* txt)
+{
+    return CreateWindow(
+        L"button", txt,
+        WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
+        nX, nY, nWidth, nHeight,
+        hParent, (HMENU)id, hInst, NULL);
+}
+HWND create_group(HWND hParent, int nX, int nY, int nWidth, int nHeight, TCHAR* txt, int id)
+{
+    return CreateWindowEx(0,
+        L"BUTTON", txt,
+        WS_CHILD | WS_VISIBLE | BS_GROUPBOX | WS_EX_CLIENTEDGE,
+        nX, nY, nWidth, nHeight,
+        hParent, (HMENU)id, hInst, NULL);
+}
 void create_shotcut_control(HWND hDlg)
 {
+    HWND chkboxhwnd = create_checkbox(hDlg, 60, 16, 150, 20, IDD_SHORTCUT_TWICECHECKBOX, L"Key twice");
+    if (g_twice_key != L"")
+        SendMessage(chkboxhwnd, BM_SETCHECK, BST_CHECKED, 0);
+
+    HWND twgrouphwnd = create_group(hDlg, 5, 45, 206, 158, (TCHAR*)L"", IDD_SHORTCUT_TWGROUP);
+    HWND twctrlhwnd = create_combobox(twgrouphwnd, 28, 20, 150, 20, IDD_SHORTCUT_TWCTRL);
+    SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
+    SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
+    if (g_twice_key == L"ctrl")
+        SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
+    else
+        SendMessage(twctrlhwnd, CB_SETCURSEL, 1, 0);
+
+    HWND cmbgrouphwnd = create_group(hDlg, 5, 45, 206, 158, (TCHAR*)L"", IDD_SHORTCUT_CMBGROUP);
     HWND keylisthwnd = CreateWindow(
         L"COMBOBOX", NULL,
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_CLIPSIBLINGS | WS_VSCROLL,
-        32, 10, 150, 20,
-        hDlg, (HMENU)IDD_SHORTCUT_KEY_LISTBOX, hInst, NULL);
+        28, 20, 150, 20,
+        cmbgrouphwnd, (HMENU)IDD_SHORTCUT_KEY_LISTBOX, hInst, NULL);
     TCHAR i;
     int selidx = 0;
     for (i = L'z'; L'a' <= i; i--) {
@@ -545,7 +595,7 @@ void create_shotcut_control(HWND hDlg)
     SendMessage(keylisthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     SendMessage(keylisthwnd, CB_SETCURSEL, selidx, 0);
 
-    HWND ctrlhwnd = create_combobox(hDlg, 32, 45, 150, 20, IDD_SHORTCUT_CTRL_LISTBOX);
+    HWND ctrlhwnd = create_combobox(cmbgrouphwnd, 28, 55, 150, 20, IDD_SHORTCUT_CTRL_LISTBOX);
     SendMessage(ctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
     SendMessage(ctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     if (keyobj.ctrl) {
@@ -554,7 +604,7 @@ void create_shotcut_control(HWND hDlg)
         SendMessage(ctrlhwnd, CB_SETCURSEL, 0, 0);
     }
 
-    HWND althwnd = create_combobox(hDlg, 32, 80, 150, 20, IDD_SHORTCUT_ALT_LISTBOX);
+    HWND althwnd = create_combobox(cmbgrouphwnd, 28, 90, 150, 20, IDD_SHORTCUT_ALT_LISTBOX);
     SendMessage(althwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
     SendMessage(althwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     SendMessage(althwnd, CB_SETCURSEL, 0, 0);
@@ -564,7 +614,7 @@ void create_shotcut_control(HWND hDlg)
         SendMessage(althwnd, CB_SETCURSEL, 0, 0);
     }
 
-    HWND shifthwnd = create_combobox(hDlg, 32, 115, 150, 20, IDD_SHORTCUT_SHIFT_LISTBOX);
+    HWND shifthwnd = create_combobox(cmbgrouphwnd, 28, 120, 150, 20, IDD_SHORTCUT_SHIFT_LISTBOX);
     SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"SHIFT");
     SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     SendMessage(shifthwnd, CB_SETCURSEL, 0, 0);
@@ -574,8 +624,14 @@ void create_shotcut_control(HWND hDlg)
         SendMessage(shifthwnd, CB_SETCURSEL, 0, 0);
     }
 
-    create_button(hDlg, 18, 170, 90, 26, IDD_SHORTCUT_OKBUTTON, (TCHAR*)L"OK");
-    create_button(hDlg, 110, 170, 90, 26, IDD_SHORTCUT_CANCELBUTTON, (TCHAR*)L"Cancel");
+    if (g_twice_key == L"") {
+        ShowWindow(twgrouphwnd, SW_HIDE);
+    } else {
+        ShowWindow(cmbgrouphwnd, SW_HIDE);
+    }
+
+    create_button(hDlg, 18, 230, 90, 26, IDD_SHORTCUT_OKBUTTON, (TCHAR*)L"OK");
+    create_button(hDlg, 110, 230, 90, 26, IDD_SHORTCUT_CANCELBUTTON, (TCHAR*)L"Cancel");
 }
 void toggle_shortcut()
 {
@@ -589,54 +645,84 @@ void toggle_shortcut()
 }
 void ok_shotcut(HWND hDlg)
 {
-    HWND keylisthwnd = GetDlgItem(hDlg, IDD_SHORTCUT_KEY_LISTBOX);
-    HWND ctrlhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_CTRL_LISTBOX);
-    HWND althwnd = GetDlgItem(hDlg, IDD_SHORTCUT_ALT_LISTBOX);
-    HWND shifthwnd = GetDlgItem(hDlg, IDD_SHORTCUT_SHIFT_LISTBOX);
+    HWND chkhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_TWICECHECKBOX);
+    if (BST_CHECKED == SendMessage(chkhwnd, BM_GETCHECK, 0, 0)) {
 
-    TCHAR keytxt[10];
-    GetWindowText(keylisthwnd, keytxt, 10);
-    TCHAR ctrltxt[10];
-    GetWindowText(ctrlhwnd, ctrltxt, 10);
-    TCHAR alttxt[10];
-    GetWindowText(althwnd, alttxt, 10);
-    TCHAR shifttxt[10];
-    GetWindowText(shifthwnd, shifttxt, 10);
+        HWND twgrp = GetDlgItem(hDlg, IDD_SHORTCUT_TWGROUP);
+        HWND twkeyhwnd = GetDlgItem(twgrp, IDD_SHORTCUT_TWCTRL);
+        int exeidx = SendMessage(twkeyhwnd, CB_GETCURSEL, 0, 0);
+        if (exeidx == 0) {
+            g_twice_key = L"ctrl";
+        } else {
+            g_twice_key = L"alt";
+        }
 
-    int regval = 0;
-    if (keytxt == L"") {
-        keyobj.keycode = 0;
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"twice", L"enable",
+            L"", false);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"twice_key", g_twice_key.c_str(),
+            L"", false);
+
     } else {
-        keyobj.keycode = *keytxt;
-        UINT keycode = keyobj.keycode;
-        regval = 1000 * keycode;
-    }
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"twice", L"disable",
+            L"", false);
+        g_twice_key = L"";
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"twice_key", g_twice_key.c_str(),
+            L"", false);
 
-    if (_tcslen(ctrltxt) == 0) {
-        keyobj.ctrl = false;
-    } else {
-        keyobj.ctrl = true;
-        regval += 100;
-    }
+        HWND cmbgrp = GetDlgItem(hDlg, IDD_SHORTCUT_CMBGROUP);
+        HWND keylisthwnd = GetDlgItem(cmbgrp, IDD_SHORTCUT_KEY_LISTBOX);
+        HWND ctrlhwnd = GetDlgItem(cmbgrp, IDD_SHORTCUT_CTRL_LISTBOX);
+        HWND althwnd = GetDlgItem(cmbgrp, IDD_SHORTCUT_ALT_LISTBOX);
+        HWND shifthwnd = GetDlgItem(cmbgrp, IDD_SHORTCUT_SHIFT_LISTBOX);
 
-    if (_tcslen(alttxt) == 0) {
-        keyobj.alt = false;
-    } else {
-        keyobj.alt = true;
-        regval += 10;
-    }
+        TCHAR keytxt[10];
+        GetWindowText(keylisthwnd, keytxt, 10);
+        TCHAR ctrltxt[10];
+        GetWindowText(ctrlhwnd, ctrltxt, 10);
+        TCHAR alttxt[10];
+        GetWindowText(althwnd, alttxt, 10);
+        TCHAR shifttxt[10];
+        GetWindowText(shifthwnd, shifttxt, 10);
 
-    if (_tcslen(shifttxt) == 0) {
-        keyobj.shift = false;
-    } else {
-        keyobj.shift = true;
-        regval += 1;
-    }
+        int regval = 0;
+        if (keytxt == L"") {
+            keyobj.keycode = 0;
+        } else {
+            keyobj.keycode = *keytxt;
+            UINT keycode = keyobj.keycode;
+            regval = 1000 * keycode;
+        }
 
-    std::wstring regstr = std::to_wstring(regval);
-    create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
-        L"shortcut", regstr.c_str(),
-        L"", false);
+        if (_tcslen(ctrltxt) == 0) {
+            keyobj.ctrl = false;
+        } else {
+            keyobj.ctrl = true;
+            regval += 100;
+        }
+
+        if (_tcslen(alttxt) == 0) {
+            keyobj.alt = false;
+        } else {
+            keyobj.alt = true;
+            regval += 10;
+        }
+
+        if (_tcslen(shifttxt) == 0) {
+            keyobj.shift = false;
+        } else {
+            keyobj.shift = true;
+            regval += 1;
+        }
+
+        std::wstring regstr = std::to_wstring(regval);
+        create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
+            L"shortcut", regstr.c_str(),
+            L"", false);
+    }
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -686,6 +772,18 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
                 if (idx == 0) {
                     SendMessage(ctrlhwnd, CB_SETCURSEL, 1, 0);
                 }
+            }
+        } else if (LOWORD(wParam) == IDD_SHORTCUT_TWICECHECKBOX) {
+            HWND chkhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_TWICECHECKBOX);
+            HWND grphwnd = GetDlgItem(hDlg, IDD_SHORTCUT_CMBGROUP);
+            HWND twgrphwnd = GetDlgItem(hDlg, IDD_SHORTCUT_TWGROUP);
+
+            if (BST_CHECKED == SendMessage(chkhwnd, BM_GETCHECK, 0, 0)) {
+                ShowWindow(grphwnd, SW_HIDE);
+                ShowWindow(twgrphwnd, SW_SHOWNORMAL);
+            } else {
+                ShowWindow(twgrphwnd, SW_HIDE);
+                ShowWindow(grphwnd, SW_SHOWNORMAL);
             }
         }
         break;
