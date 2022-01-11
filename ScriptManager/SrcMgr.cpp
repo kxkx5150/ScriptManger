@@ -301,10 +301,10 @@ void SrcMgr::change_script_path()
 }
 void SrcMgr::create_control()
 {
-    m_hFont = create_font(16);
-    m_shFont = create_font(13);
-    m_sshFont = create_font(10);
-    m_lsthFont = create_font(12);
+    m_hFont = create_font(18);
+    m_shFont = create_font(15);
+    m_sshFont = create_font(13);  //  three dot button
+    m_lsthFont = create_font(15); // agrgs list
 
     m_combogrouphwnd = create_group(m_prnthwnd, 2, 1, 320, 44, (TCHAR*)L"");
     m_combohwnd = create_combobox(m_combogrouphwnd, 2, 14, 180, 200, IDC_COMBO);
@@ -313,8 +313,8 @@ void SrcMgr::create_control()
     SetWindowSubclass(m_combogrouphwnd, &SubclassWindowProc, 0, 0);
 
     m_dropgrouphwnd = create_group(m_prnthwnd, 2, 48, 320, 112, (TCHAR*)L" Drop argument files ");
-    m_dd_clearhwnd = create_button(m_dropgrouphwnd, 0, 0, 58, 17, IDC_CLEAR_ARG_BUTTON, (TCHAR*)L"Clear");
-    m_dd_listhwnd = create_dorp_listbox(m_dropgrouphwnd, 2, 22, 298, 96, IDS_LISTBOX);
+    m_dd_clearhwnd = create_button(m_dropgrouphwnd, 4, 0, 58, 17, IDC_CLEAR_ARG_BUTTON, (TCHAR*)L"Clear");
+    m_dd_listhwnd = create_listbox(m_dropgrouphwnd, 5, 17, 295, 94, IDS_LISTBOX);
     m_addarghwnd = create_button(m_dropgrouphwnd, 300, 18, 18, 18, IDC_ADD_ARG_BUTTON, (TCHAR*)L"+");
     m_delarghwnd = create_button(m_dropgrouphwnd, 300, 38, 18, 18, IDC_DEL_ARG_BUTTON, (TCHAR*)L"-");
     m_uparghwnd = create_button(m_dropgrouphwnd, 300, 58, 18, 22, IDC_UP_ARG_BUTTON, (TCHAR*)L"ª");
@@ -325,22 +325,22 @@ void SrcMgr::create_control()
     SetWindowLongPtr(m_dd_listhwnd, GWLP_USERDATA, (LONG)this);
 
     m_addgrouphwnd = create_group(m_prnthwnd, 2, 162, 320, 320, (TCHAR*)L" Add script ", IDC_ADDGROUP);
-    m_name_edithwnd = create_edittext(m_addgrouphwnd, 4, 18, 160, 18, IDC_NAMETEXT, (TCHAR*)L"");
-    m_cmd_edithwnd = create_edittext(m_addgrouphwnd, 4, 46, 160, 18, IDC_EXE_EDIT, (TCHAR*)L"python.exe");
+    m_name_edithwnd = create_edittext(m_addgrouphwnd, 4, 18, 160, 20, IDC_NAMETEXT, (TCHAR*)L"");
+    m_cmd_edithwnd = create_edittext(m_addgrouphwnd, 4, 46, 160, 20, IDC_EXE_EDIT, (TCHAR*)L"python.exe");
 
-    m_src_pathhwnd = create_edittext(m_addgrouphwnd, 4, 76, 284, 18, IDC_SRCPATH, (TCHAR*)L"");
-    m_src_filebtn = create_button(m_addgrouphwnd, 292, 75, 26, 19, IDC_SRC_BUTTON, (TCHAR*)L"...");
+    m_src_pathhwnd = create_edittext(m_addgrouphwnd, 4, 76, 284, 20, IDC_SRCPATH, (TCHAR*)L"");
+    m_src_filebtn = create_button(m_addgrouphwnd, 292, 76, 26, 19, IDC_SRC_BUTTON, (TCHAR*)L"...");
 
-    m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 5, 102, 200, 18, IDC_VENVCHK, (TCHAR*)L"Use venv (pre-exec *.bat)");
-    m_venv_pathhwnd = create_edittext(m_addgrouphwnd, 4, 120, 284, 18, IDC_VENVPATH, (TCHAR*)L"");
-    m_venv_dirbtn = create_button(m_addgrouphwnd, 292, 119, 26, 19, IDC_VENV_BUTTON, (TCHAR*)L"...");
+    m_venv_chkboxhwnd = create_checkbox(m_addgrouphwnd, 5, 100, 200, 20, IDC_VENVCHK, (TCHAR*)L"Use venv (pre-exec *.bat)");
+    m_venv_pathhwnd = create_edittext(m_addgrouphwnd, 4, 120, 284, 20, IDC_VENVPATH, (TCHAR*)L"");
+    m_venv_dirbtn = create_button(m_addgrouphwnd, 292, 120, 26, 19, IDC_VENV_BUTTON, (TCHAR*)L"...");
 
-    m_dir_pathhwnd = create_edittext(m_addgrouphwnd, 4, 161, 284, 18, IDC_WDIRPATH, (TCHAR*)L"");
-    m_working_dirbtn = create_button(m_addgrouphwnd, 292, 160, 26, 19, IDC_DIR_BUTTON, (TCHAR*)L"...");
+    m_dir_pathhwnd = create_edittext(m_addgrouphwnd, 4, 161, 284, 20, IDC_WDIRPATH, (TCHAR*)L"");
+    m_working_dirbtn = create_button(m_addgrouphwnd, 292, 161, 26, 19, IDC_DIR_BUTTON, (TCHAR*)L"...");
     SetWindowSubclass(m_addgrouphwnd, &SubclassWindowProc, 0, 0);
     SetWindowLongPtr(m_addgrouphwnd, GWLP_USERDATA, (LONG)this);
 
-    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 48, 193, 126, 18, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store arguments");
+    m_stor_arg_chkboxhwnd = create_checkbox(m_addgrouphwnd, 94, 193, 126, 20, IDC_STORE_ARGS_CHKBOX, (TCHAR*)L"Store Arguments");
 
     create_cmd_radiobutton(m_addgrouphwnd, 64, 226, 80, 25);
     m_add_btnhwnd = create_button(m_addgrouphwnd, 16, 270, 90, 32, IDC_ADD_BUTTON, (TCHAR*)L"Add");
@@ -348,8 +348,8 @@ void SrcMgr::create_control()
     m_clear_btnhwnd = create_button(m_addgrouphwnd, 214, 270, 90, 32, ID_CLEAR_BUTTON, (TCHAR*)L"Clear");
 
     m_search_grouphwnd = create_group(m_prnthwnd, 2, 2, 320, 190, (TCHAR*)L" Search ", IDC_SEARCHGROUP);
-    m_search_edithwnd = create_edittext(m_search_grouphwnd, 2, 18, 315, 21, IDC_SEARCH_EDIT, (TCHAR*)L"");
-    m_search_listhwnd = create_dorp_listbox(m_search_grouphwnd, 2, 46, 315, 145, IDC_SEARCH_LIST);
+    m_search_edithwnd = create_edittext(m_search_grouphwnd, 5, 18, 311, 21, IDC_SEARCH_EDIT, (TCHAR*)L"");
+    m_search_listhwnd = create_listbox(m_search_grouphwnd, 5, 44, 311, 155, IDC_SEARCH_LIST);
     SetWindowSubclass(m_search_edithwnd, &search_proc, 0, 0);
     SetWindowSubclass(m_search_listhwnd, &search_listproc, 0, 0);
     ShowWindow(m_search_grouphwnd, SW_HIDE);
@@ -371,7 +371,7 @@ HFONT SrcMgr::create_font(int fontsize)
         SHIFTJIS_CHARSET,
         OUT_DEFAULT_PRECIS,
         CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH, L"MS Gothic");
+        DEFAULT_QUALITY, DEFAULT_PITCH, L"Segoe UI");
 }
 void SrcMgr::set_font()
 {
@@ -408,6 +408,11 @@ void SrcMgr::set_font()
 
     SendMessage(m_addarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
     SendMessage(m_delarghwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+
+    SendMessage(m_add_btnhwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_update_btnhwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(m_clear_btnhwnd, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(FALSE, 0));
+
 }
 HWND SrcMgr::create_combobox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
 {
@@ -425,7 +430,7 @@ HWND SrcMgr::create_button(HWND hParent, int nX, int nY, int nWidth, int nHeight
         nX, nY, nWidth, nHeight,
         hParent, (HMENU)id, m_hInst, NULL);
 }
-HWND SrcMgr::create_dorp_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
+HWND SrcMgr::create_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id)
 {
     return CreateWindow(
         L"LISTBOX", NULL,
@@ -1103,12 +1108,6 @@ LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
         g_srcmgr->input_search(hWnd, (TCHAR)wParam);
         break;
 
-    //case WM_KILLFOCUS: {
-    //    SetActiveWindow(g_srcmgr->m_prnthwnd);
-
-
-    //} break;
-
     case WM_KEYDOWN:
         switch (wParam) {
 
@@ -1143,7 +1142,7 @@ LRESULT CALLBACK search_listproc(HWND hWnd, UINT uMsg, WPARAM wParam,
         g_srcmgr->set_focus_search_editor();
         break;
 
-    case WM_LBUTTONUP: {
+    case WM_LBUTTONDBLCLK: {
         int idx = SendMessage(g_srcmgr->m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
         g_srcmgr->exec_search_command(idx);
     } break;

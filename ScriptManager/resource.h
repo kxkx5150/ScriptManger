@@ -45,19 +45,16 @@
 #define IDC_SEARCH_LIST                 180
 #define IDB_BITMAP1                     183
 #define IDD_DIALOGBAR                   186
-
-#define IDD_SHORTCUT_KEY_LISTBOX		187
-#define IDD_SHORTCUT_CTRL_LISTBOX		188
-#define IDD_SHORTCUT_ALT_LISTBOX		189
-#define IDD_SHORTCUT_SHIFT_LISTBOX		190
-#define IDD_SHORTCUT_OKBUTTON			191
-#define IDD_SHORTCUT_CANCELBUTTON		192
-#define IDD_SHORTCUT_CMBGROUP			193
-#define IDD_SHORTCUT_TWICECHECKBOX		194
-#define IDD_SHORTCUT_TWGROUP			195
-#define IDD_SHORTCUT_TWCTRL				196
-
-
+#define IDD_SHORTCUT_KEY_LISTBOX        187
+#define IDD_SHORTCUT_CTRL_LISTBOX       188
+#define IDD_SHORTCUT_ALT_LISTBOX        189
+#define IDD_SHORTCUT_SHIFT_LISTBOX      190
+#define IDD_SHORTCUT_OKBUTTON           191
+#define IDD_SHORTCUT_CANCELBUTTON       192
+#define IDD_SHORTCUT_CMBGROUP           193
+#define IDD_SHORTCUT_TWICECHECKBOX      194
+#define IDD_SHORTCUT_TWGROUP            195
+#define IDD_SHORTCUT_TWCTRL             196
 #define IDS_LISTBOX                     198
 #define IDC_EDIT1                       1001
 #define IDC_ARG_OK_BUTTON               1002
@@ -65,6 +62,7 @@
 #define IDC_ARG_CANCEL_BUTTON           1004
 #define IDC_LIST2                       1004
 #define WM_TO_TRAY                      1005
+#define IDC_NETADDRESS1                 1005
 #define IDC_RMENU_TERMINAL              1009
 #define IDC_RMENU_TERMINAL_AS           1010
 #define IDC_ARG_EDIT                    1011
@@ -91,7 +89,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        142
 #define _APS_NEXT_COMMAND_VALUE         32783
-#define _APS_NEXT_CONTROL_VALUE         1005
+#define _APS_NEXT_CONTROL_VALUE         1006
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

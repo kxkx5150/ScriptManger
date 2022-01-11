@@ -138,7 +138,7 @@ private:
     HWND create_group(HWND hParent, int nX, int nY, int nWidth, int nHeight, TCHAR* txt, int id = NULL);
     HWND create_combobox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id);
     HWND create_button(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
-    HWND create_dorp_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id);
+    HWND create_listbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id);
     HWND create_edittext(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     HWND create_checkbox(HWND hParent, int nX, int nY, int nWidth, int nHeight, int id, TCHAR* txt);
     void create_cmd_radiobutton(HWND hParent, int nX, int nY, int nWidth, int nHeight);

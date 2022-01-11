@@ -1,6 +1,7 @@
 ﻿#include "ScriptManager.h"
 #include "SrcMgr.h"
 #include "framework.h"
+#include <CommCtrl.h>
 #include <strsafe.h>
 
 NOTIFYICONDATA g_nid;
@@ -9,6 +10,7 @@ int main_window_width = 340;
 int main_window_height = 544;
 int add_group_height = 176;
 std::wstring g_twice_key = L"";
+bool g_twice_flg = false;
 
 struct KeyObj {
     bool alt;
@@ -32,6 +34,8 @@ SrcMgr* g_script_manager = nullptr;
 HHOOK hHook { NULL };
 HWND g_mainhwnd = nullptr;
 
+LRESULT CALLBACK shortcut_group_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -517,7 +521,7 @@ void get_reg_sttings(HWND hWnd)
         if (str == L"ctrl") {
             g_twice_key = L"ctrl";
         } else {
-            g_twice_key = L"alt";
+            g_twice_key = L"shift";
         }
     }
 }
@@ -569,14 +573,15 @@ void create_shotcut_control(HWND hDlg)
 
     HWND twgrouphwnd = create_group(hDlg, 5, 45, 206, 158, (TCHAR*)L"", IDD_SHORTCUT_TWGROUP);
     HWND twctrlhwnd = create_combobox(twgrouphwnd, 28, 20, 150, 20, IDD_SHORTCUT_TWCTRL);
-    //SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
+    SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"SHIFT");
     SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
     if (g_twice_key == L"ctrl")
         SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
     else
-        SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
+        SendMessage(twctrlhwnd, CB_SETCURSEL, 1, 0);
 
-    HWND cmbgrouphwnd = create_group(hDlg, 5, 45, 206, 158, (TCHAR*)L"", IDD_SHORTCUT_CMBGROUP);
+    HWND cmbgrouphwnd = create_group(hDlg, 5, 45, 206, 164, (TCHAR*)L"", IDD_SHORTCUT_CMBGROUP);
+    SetWindowSubclass(cmbgrouphwnd, &shortcut_group_proc, 0, 0);
     HWND keylisthwnd = CreateWindow(
         L"COMBOBOX", NULL,
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_CLIPSIBLINGS | WS_VSCROLL,
@@ -614,7 +619,7 @@ void create_shotcut_control(HWND hDlg)
         SendMessage(althwnd, CB_SETCURSEL, 0, 0);
     }
 
-    HWND shifthwnd = create_combobox(cmbgrouphwnd, 28, 120, 150, 20, IDD_SHORTCUT_SHIFT_LISTBOX);
+    HWND shifthwnd = create_combobox(cmbgrouphwnd, 28, 125, 150, 20, IDD_SHORTCUT_SHIFT_LISTBOX);
     SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"SHIFT");
     SendMessage(shifthwnd, CB_INSERTSTRING, 0, (LPARAM)L"");
     SendMessage(shifthwnd, CB_SETCURSEL, 0, 0);
@@ -630,8 +635,8 @@ void create_shotcut_control(HWND hDlg)
         ShowWindow(cmbgrouphwnd, SW_HIDE);
     }
 
-    create_button(hDlg, 18, 230, 90, 26, IDD_SHORTCUT_OKBUTTON, (TCHAR*)L"OK");
-    create_button(hDlg, 110, 230, 90, 26, IDD_SHORTCUT_CANCELBUTTON, (TCHAR*)L"Cancel");
+    create_button(hDlg, 18, 220, 90, 26, IDD_SHORTCUT_OKBUTTON, (TCHAR*)L"OK");
+    create_button(hDlg, 110, 220, 90, 26, IDD_SHORTCUT_CANCELBUTTON, (TCHAR*)L"Cancel");
 }
 void toggle_shortcut()
 {
@@ -654,7 +659,7 @@ void ok_shotcut(HWND hDlg)
         if (exeidx == 0) {
             g_twice_key = L"ctrl";
         } else {
-            g_twice_key = L"alt";
+            g_twice_key = L"shift";
         }
 
         create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
@@ -722,6 +727,38 @@ void ok_shotcut(HWND hDlg)
         create_shellreg(L"SOFTWARE", L"Script_Manager_kxkx5150",
             L"shortcut", regstr.c_str(),
             L"", false);
+        g_twice_flg = false;
+    }
+}
+void shortcut_keydown(int lkey, int rkey, LPARAM lParam)
+{
+    KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+    //if (pK->vkCode == VK_ESCAPE) {
+    //    g_twice_flg = false;
+    //    PostMessage(g_mainhwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+    //} else 
+    if (pK->vkCode != lkey && pK->vkCode != lParam) {
+        g_twice_flg = false;
+    }
+}
+void shortcut_keyup(int lkey, int rkey, int okey1, int okey2, LPARAM lParam)
+{
+    KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+    if (pK->vkCode != lkey && pK->vkCode != rkey) {
+        g_twice_flg = false;
+    } else {
+        bool okeyflg1 = GetKeyState(okey1) < 0 ? true : false;
+        bool okeyflg2 = GetKeyState(okey2) < 0 ? true : false;
+        if (okeyflg1 || okeyflg2) {
+            g_twice_flg = false;
+        } else {
+            if (!g_twice_flg) {
+                g_twice_flg = true;
+                SetTimer(g_mainhwnd, 100, 500, NULL);
+            } else {
+                toggle_shortcut();
+            }
+        }
     }
 }
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -739,6 +776,31 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
+}
+LRESULT CALLBACK shortcut_group_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+    switch (uMsg) {
+    case WM_COMMAND: {
+        switch (LOWORD(wParam)) {
+        case IDD_SHORTCUT_ALT_LISTBOX: {
+            int wmEvent = HIWORD(wParam);
+            if (wmEvent == LBN_SELCHANGE) {
+                HWND ctrlhwnd = GetDlgItem(hWnd, IDD_SHORTCUT_CTRL_LISTBOX);
+                HWND althwnd = GetDlgItem(hWnd, IDD_SHORTCUT_ALT_LISTBOX);
+                int altidx = SendMessage(althwnd, CB_GETCURSEL, 0, 0);
+                if (altidx == 0)
+                    break;
+                int idx = SendMessage(ctrlhwnd, CB_GETCURSEL, 0, 0);
+                if (idx == 0) {
+                    SendMessage(ctrlhwnd, CB_SETCURSEL, 1, 0);
+                }
+            }
+        }
+        }
+    }
+    }
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -758,21 +820,7 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
         } else if (LOWORD(wParam) == IDD_SHORTCUT_CANCELBUTTON) {
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
-        } else if (LOWORD(wParam) == IDD_SHORTCUT_ALT_LISTBOX) {
-            int wmEvent = HIWORD(wParam);
-            if (wmEvent == LBN_SELCHANGE) {
-                HWND ctrlhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_CTRL_LISTBOX);
-                HWND althwnd = GetDlgItem(hDlg, IDD_SHORTCUT_ALT_LISTBOX);
 
-                int altidx = SendMessage(althwnd, CB_GETCURSEL, 0, 0);
-                if (altidx == 0)
-                    break;
-
-                int idx = SendMessage(ctrlhwnd, CB_GETCURSEL, 0, 0);
-                if (idx == 0) {
-                    SendMessage(ctrlhwnd, CB_SETCURSEL, 1, 0);
-                }
-            }
         } else if (LOWORD(wParam) == IDD_SHORTCUT_TWICECHECKBOX) {
             HWND chkhwnd = GetDlgItem(hDlg, IDD_SHORTCUT_TWICECHECKBOX);
             HWND grphwnd = GetDlgItem(hDlg, IDD_SHORTCUT_CMBGROUP);
@@ -790,12 +838,10 @@ INT_PTR CALLBACK shortcut_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LP
     }
     return (INT_PTR)FALSE;
 }
-bool g_twice_flg = false;
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (wParam == WM_KEYDOWN) {
         if (g_twice_key == L"") {
-            g_twice_flg = false;
             KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
             if (pK->vkCode == keyobj.keycode - 32) {
                 bool ctrl = GetKeyState(VK_CONTROL) < 0 ? true : false;
@@ -810,39 +856,19 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
                     }
                 }
             }
-        } else if (g_twice_key == L"alt") {
-            g_twice_flg = false;
-        } else {
-            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
-            if (pK->vkCode != VK_LCONTROL && pK->vkCode != VK_RCONTROL) {
-                g_twice_flg = false;
-            }
+        } else if (g_twice_key == L"ctrl") {
+            shortcut_keydown(VK_LCONTROL, VK_RCONTROL, lParam);
+        } else if (g_twice_key == L"shift") {
+            shortcut_keydown(VK_LSHIFT, VK_RSHIFT, lParam);
         }
     } else if (wParam == WM_KEYUP) {
-        if (g_twice_key == L"ctrl") {
-            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
-
-            if (pK->vkCode != VK_LCONTROL && pK->vkCode != VK_RCONTROL) {
-                g_twice_flg = false;
-            } else {
-                bool alt = GetKeyState(VK_MENU) < 0 ? true : false;
-                bool shift = GetKeyState(VK_SHIFT) < 0 ? true : false;
-                if (alt || shift) {
-                    g_twice_flg = false;
-                } else {
-                    if (!g_twice_flg) {
-                        g_twice_flg = true;
-                        SetTimer(g_mainhwnd, 100, 500, NULL);
-                    } else {
-                        toggle_shortcut();
-                        return TRUE;
-                    }
-                }
-            }
-        } else {
+        if (g_twice_key == L"") {
             g_twice_flg = false;
+        } else if (g_twice_key == L"ctrl") {
+            shortcut_keyup(VK_LCONTROL, VK_RCONTROL, VK_MENU, VK_SHIFT, lParam);
+        } else if (g_twice_key == L"shift") {
+            shortcut_keyup(VK_LSHIFT, VK_RSHIFT, VK_MENU, VK_CONTROL, lParam);
         }
-
     } else if (wParam == WM_SYSKEYDOWN) {
         g_twice_flg = false;
     }
