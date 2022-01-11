@@ -118,6 +118,7 @@ void delete_regkey(const TCHAR* key)
         return;
     RegDeleteValue(newValue, key);
 }
+
 BOOL create_shellreg(const TCHAR* parentkey, const TCHAR* key,
     const TCHAR* valname, const TCHAR* val, const TCHAR* optstr, bool createsub = true)
 {
@@ -511,7 +512,6 @@ void get_reg_sttings(HWND hWnd)
             if (sval >= 1) {
                 keyobj.shift = true;
             }
-            OutputDebugString(L"");
         }
     }
 
@@ -520,8 +520,10 @@ void get_reg_sttings(HWND hWnd)
         str = get_regval(hWnd, L"SOFTWARE\\Script_Manager_kxkx5150", L"twice_key");
         if (str == L"ctrl") {
             g_twice_key = L"ctrl";
-        } else {
+        } else if (str == L"shift") {
             g_twice_key = L"shift";
+        } else {
+            g_twice_key = L"alt";
         }
     }
 }
@@ -575,10 +577,13 @@ void create_shotcut_control(HWND hDlg)
     HWND twctrlhwnd = create_combobox(twgrouphwnd, 28, 20, 150, 20, IDD_SHORTCUT_TWCTRL);
     SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"SHIFT");
     SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"CTRL");
+    SendMessage(twctrlhwnd, CB_INSERTSTRING, 0, (LPARAM)L"ALT");
     if (g_twice_key == L"ctrl")
-        SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
-    else
         SendMessage(twctrlhwnd, CB_SETCURSEL, 1, 0);
+    else if (g_twice_key == L"shift")
+        SendMessage(twctrlhwnd, CB_SETCURSEL, 2, 0);
+    else
+        SendMessage(twctrlhwnd, CB_SETCURSEL, 0, 0);
 
     HWND cmbgrouphwnd = create_group(hDlg, 5, 45, 206, 164, (TCHAR*)L"", IDD_SHORTCUT_CMBGROUP);
     SetWindowSubclass(cmbgrouphwnd, &shortcut_group_proc, 0, 0);
@@ -657,6 +662,8 @@ void ok_shotcut(HWND hDlg)
         HWND twkeyhwnd = GetDlgItem(twgrp, IDD_SHORTCUT_TWCTRL);
         int exeidx = SendMessage(twkeyhwnd, CB_GETCURSEL, 0, 0);
         if (exeidx == 0) {
+            g_twice_key = L"alt";
+        } else if (exeidx == 1) {
             g_twice_key = L"ctrl";
         } else {
             g_twice_key = L"shift";
@@ -736,7 +743,7 @@ void shortcut_keydown(int lkey, int rkey, LPARAM lParam)
     //if (pK->vkCode == VK_ESCAPE) {
     //    g_twice_flg = false;
     //    PostMessage(g_mainhwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
-    //} else 
+    //} else
     if (pK->vkCode != lkey && pK->vkCode != lParam) {
         g_twice_flg = false;
     }
@@ -757,6 +764,7 @@ void shortcut_keyup(int lkey, int rkey, int okey1, int okey2, LPARAM lParam)
                 SetTimer(g_mainhwnd, 100, 500, NULL);
             } else {
                 toggle_shortcut();
+                g_twice_flg = false;
             }
         }
     }
@@ -860,6 +868,8 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             shortcut_keydown(VK_LCONTROL, VK_RCONTROL, lParam);
         } else if (g_twice_key == L"shift") {
             shortcut_keydown(VK_LSHIFT, VK_RSHIFT, lParam);
+        } else if (g_twice_key == L"alt") {
+            g_twice_flg = false;
         }
     } else if (wParam == WM_KEYUP) {
         if (g_twice_key == L"") {
@@ -868,13 +878,26 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             shortcut_keyup(VK_LCONTROL, VK_RCONTROL, VK_MENU, VK_SHIFT, lParam);
         } else if (g_twice_key == L"shift") {
             shortcut_keyup(VK_LSHIFT, VK_RSHIFT, VK_MENU, VK_CONTROL, lParam);
+        } else if (g_twice_key == L"alt") {
+            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+            shortcut_keyup(VK_LMENU, VK_RMENU, VK_CONTROL, VK_SHIFT, lParam);
+        }
+    } else if (wParam == WM_SYSKEYUP) {
+        if (g_twice_key == L"alt") {
+            g_twice_flg = false;
         }
     } else if (wParam == WM_SYSKEYDOWN) {
-        g_twice_flg = false;
+        if (g_twice_key == L"alt") {
+            KBDLLHOOKSTRUCT* pK = (KBDLLHOOKSTRUCT*)lParam;
+            shortcut_keydown(VK_LMENU, VK_RMENU, lParam);
+        } else {
+            g_twice_flg = false;
+        }
     }
 
     return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {

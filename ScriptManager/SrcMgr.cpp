@@ -1110,7 +1110,6 @@ LRESULT CALLBACK search_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
 
     case WM_KEYDOWN:
         switch (wParam) {
-
         case VK_UP: {
             int idx = SendMessage(g_srcmgr->m_search_listhwnd, LB_GETCURSEL, NULL, NULL);
             if (idx > 0) {
