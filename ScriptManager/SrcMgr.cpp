@@ -307,7 +307,7 @@ void SrcMgr::create_control()
     m_lsthFont = create_font(15); // agrgs list
 
     m_combogrouphwnd = create_group(m_prnthwnd, 2, 1, 320, 44, (TCHAR*)L"");
-    m_combohwnd = create_combobox(m_combogrouphwnd, 2, 14, 180, 200, IDC_COMBO);
+    m_combohwnd = create_combobox(m_combogrouphwnd, 2, 14, 180, 26, IDC_COMBO);
     m_run_btnhwnd = create_button(m_combogrouphwnd, 185, 13, 76, 26, ID_EXE, (TCHAR*)L"Run");
     m_delete_btnhwnd = create_button(m_combogrouphwnd, 263, 13, 54, 26, ID_COMB_DELETE, (TCHAR*)L"Delete");
     SetWindowSubclass(m_combogrouphwnd, &SubclassWindowProc, 0, 0);
