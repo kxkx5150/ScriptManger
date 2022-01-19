@@ -2,6 +2,7 @@
 #include "SrcMgr.h"
 #include "framework.h"
 #include <CommCtrl.h>
+#include <shlobj.h>
 #include <strsafe.h>
 
 NOTIFYICONDATA g_nid;
@@ -36,6 +37,7 @@ HWND g_mainhwnd = nullptr;
 
 LRESULT CALLBACK shortcut_group_proc(HWND hWnd, UINT uMsg, WPARAM wParam,
     LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -905,9 +907,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND: {
         switch (LOWORD(wParam)) {
 
-        case IDM_ABOUT:
+        case IDM_ABOUT: {
             DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-            break;
+        } break;
 
         case IDC_RMENU_TERMINAL:
             ShellExecute(NULL, L"", L"wt.exe", L"", L"", SW_SHOWNORMAL);
@@ -1040,6 +1042,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         } else {
             DestroyWindow(hWnd);
         }
+    } break;
+
+    case WM_SETTINGCHANGE: {
+        std::wstring rootkeystr = L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment";
+        HKEY newValue;
+        if (RegOpenKey(HKEY_LOCAL_MACHINE, rootkeystr.c_str(), &newValue) != ERROR_SUCCESS) {
+            return FALSE;
+        }
+        DWORD dwType = REG_SZ;
+        TCHAR data[8190] = {};
+        DWORD dwSize = sizeof(data);
+        if (RegQueryValueEx(newValue, L"PATH", NULL, &dwType, (LPBYTE)data, &dwSize) == ERROR_SUCCESS) {
+            BOOL bRet = SetEnvironmentVariable(L"PATH", data);
+        }
+        RegCloseKey(newValue);
+
     } break;
 
     case WM_DESTROY: {
