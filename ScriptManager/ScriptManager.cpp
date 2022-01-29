@@ -1051,7 +1051,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             return FALSE;
         }
         DWORD dwType = REG_SZ;
-        TCHAR data[8190] = {};
+        TCHAR data[2048] = {};
         DWORD dwSize = sizeof(data);
         if (RegQueryValueEx(newValue, L"PATH", NULL, &dwType, (LPBYTE)data, &dwSize) == ERROR_SUCCESS) {
             BOOL bRet = SetEnvironmentVariable(L"PATH", data);
